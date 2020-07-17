@@ -53,7 +53,7 @@ jobs:
         python -m pep517.build --source --out-dir dist .
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@2.1.0
       with:
         name: dist
         path: ./dist
