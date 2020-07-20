@@ -234,7 +234,7 @@ class Harvester:
             if ProofOfSpace.can_create_proof(
                 plot_info.prover.get_id(),
                 new_challenge.challenge_hash,
-                self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+                uint8(self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG),
             ):
                 awaitables.append(lookup_challenge(filename, plot_info.prover))
 
