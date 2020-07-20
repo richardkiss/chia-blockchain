@@ -1,11 +1,11 @@
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64
+from src.util.ints import uint8, uint64
 from src.consensus.pos_quality import quality_str_to_quality
 
 
 def calculate_iterations_quality(
-    quality: bytes32, size: int, difficulty: int, min_iterations: int,
+    quality: bytes32, size: uint8, difficulty: uint64, min_iterations: uint64,
 ) -> uint64:
     """
     Calculates the number of iterations from the quality. The quality is converted to a number
@@ -21,9 +21,9 @@ def calculate_iterations_quality(
 
 def calculate_iterations(
     proof_of_space: ProofOfSpace,
-    difficulty: int,
-    min_iterations: int,
-    num_zero_bits: int,
+    difficulty: uint64,
+    min_iterations: uint64,
+    num_zero_bits: uint8,
 ) -> uint64:
     """
     Convenience function to calculate the number of iterations using the proof instead
@@ -38,9 +38,9 @@ def calculate_iterations(
 
 def calculate_min_iters_from_iterations(
     proof_of_space: ProofOfSpace,
-    difficulty: int,
+    difficulty: uint64,
     iterations: uint64,
-    num_zero_bits: int,
+    num_zero_bits: uint8,
 ) -> uint64:
     """
     Using the total number of iterations on a block (which is encoded in the block) along with
