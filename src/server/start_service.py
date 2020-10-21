@@ -11,10 +11,11 @@ try:
 except ImportError:
     uvloop = None
 
+from src.config.peer_info_config import PeerInfoConfig
+from src.config.logging_config import LoggingConfig
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer, start_server
 from src.server.upnp import upnp_remap_port
-from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
 from src.util.config import load_config, load_config_cli
 from src.util.setproctitle import setproctitle
@@ -35,7 +36,7 @@ class Service:
         service_name: str,
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
-        connect_peers: List[PeerInfo] = [],
+        connect_peers: List[PeerInfoConfig] = [],
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[OnConnectFunc] = None,
         rpc_info: Optional[Tuple[type, int]] = None,
@@ -59,7 +60,9 @@ class Service:
             service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
             service_config = load_config(root_path, "config.yaml", service_name)
-        initialize_logging(service_name, service_config["logging"], root_path)
+        initialize_logging(
+            service_name, LoggingConfig.from_dict(service_config["logging"]), root_path
+        )
 
         self._rpc_info = rpc_info
 
@@ -117,7 +120,9 @@ class Service:
         ]
 
         self._reconnect_tasks = [
-            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers)
+            start_reconnect_task(
+                self._server, _.to_peer_info(), self._log, self._auth_connect_peers
+            )
             for _ in self._connect_peers
         ]
 

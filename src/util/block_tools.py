@@ -15,7 +15,7 @@ from blspy import G1Element, G2Element, AugSchemeMPL
 from chiavdf import prove
 from chiabip158 import PyBIP158
 
-
+from src.config.logging_config import LoggingConfig
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.cmds.init import create_default_chia_config, initialize_ssl
@@ -691,7 +691,7 @@ if __name__ == "__main__":
     from src.util.default_root import DEFAULT_ROOT_PATH
     from src.consensus.default_constants import DEFAULT_CONSTANTS
 
-    initialize_logging("block_tools", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+    initialize_logging("block_tools", LoggingConfig(log_stdout=True), DEFAULT_ROOT_PATH)
     bt = BlockTools(root_path=DEFAULT_ROOT_PATH, real_plots=True)
     print(
         bytes(

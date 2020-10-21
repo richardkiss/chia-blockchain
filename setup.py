@@ -55,6 +55,7 @@ kwargs = dict(
         "build_scripts",
         "src",
         "src.cmds",
+        "src.config",
         "src.consensus",
         "src.daemon",
         "src.full_node",

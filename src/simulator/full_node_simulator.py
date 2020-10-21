@@ -1,7 +1,10 @@
+from pathlib import Path
 from secrets import token_bytes
-
-from src.full_node.full_node import FullNode
 from typing import AsyncGenerator, List, Optional
+
+from src.config.full_node_config import FullNodeConfig
+from src.consensus.constants import ConsensusConstants
+from src.full_node.full_node import FullNode
 from src.protocols import (
     full_node_protocol,
     wallet_protocol,
@@ -14,14 +17,21 @@ from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.header import Header
 from src.util.api_decorators import api_request
+from src.util.block_tools import BlockTools
 from src.util.ints import uint64
-
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class FullNodeSimulator(FullNode):
-    def __init__(self, config, root_path, consensus_constants, name, bt):
+    def __init__(
+        self,
+        config: FullNodeConfig,
+        root_path: Path,
+        consensus_constants: ConsensusConstants,
+        name: str,
+        bt: BlockTools,
+    ):
         super().__init__(config, root_path, consensus_constants, name)
         self.bt = bt
 

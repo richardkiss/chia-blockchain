@@ -2,19 +2,19 @@ import logging
 import colorlog
 
 from pathlib import Path
-from typing import Dict
 
+from src.config.logging_config import LoggingConfig
 from src.util.path import mkdir, path_from_root
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 
 
-def initialize_logging(service_name: str, logging_config: Dict, root_path: Path):
-    log_path = path_from_root(
-        root_path, logging_config.get("log_filename", "log/debug.log")
-    )
+def initialize_logging(
+    service_name: str, logging_config: LoggingConfig, root_path: Path
+):
+    log_path = path_from_root(root_path, logging_config.log_filename)
     mkdir(str(log_path.parent))
     file_name_length = 33 - len(service_name)
-    if logging_config["log_stdout"]:
+    if logging_config.log_stdout:
         handler = colorlog.StreamHandler()
         handler.setFormatter(
             colorlog.ColoredFormatter(
@@ -40,18 +40,15 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         )
         logger.addHandler(handler)
 
-    if "log_level" in logging_config:
-        if logging_config["log_level"] == "CRITICAL":
-            logger.setLevel(logging.CRITICAL)
-        elif logging_config["log_level"] == "ERROR":
-            logger.setLevel(logging.ERROR)
-        elif logging_config["log_level"] == "WARNING":
-            logger.setLevel(logging.WARNING)
-        elif logging_config["log_level"] == "INFO":
-            logger.setLevel(logging.INFO)
-        elif logging_config["log_level"] == "DEBUG":
-            logger.setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
+    if logging_config.log_level == "CRITICAL":
+        logger.setLevel(logging.CRITICAL)
+    elif logging_config.log_level == "ERROR":
+        logger.setLevel(logging.ERROR)
+    elif logging_config.log_level == "WARNING":
+        logger.setLevel(logging.WARNING)
+    elif logging_config.log_level == "INFO":
+        logger.setLevel(logging.INFO)
+    elif logging_config.log_level == "DEBUG":
+        logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
