@@ -5,6 +5,7 @@ from typing import Dict, List, Set, Optional, Callable, Tuple
 from blspy import G1Element, G2Element, AugSchemeMPL
 from src.util.keychain import Keychain
 
+from src.config.farmer_config import FarmerConfig
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.protocols import farmer_protocol, harvester_protocol
@@ -29,7 +30,7 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 class Farmer:
     def __init__(
         self,
-        farmer_config: Dict,
+        farmer_config: FarmerConfig,
         pool_config: Dict,
         keychain: Keychain,
         consensus_constants: ConsensusConstants,
@@ -58,10 +59,10 @@ class Farmer:
             raise RuntimeError(error_str)
 
         # This is the farmer configuration
-        self.wallet_target = decode_puzzle_hash(self.config["xch_target_address"])
+        self.wallet_target = decode_puzzle_hash(self.config.xch_target_address)
         self.pool_public_keys = [
             G1Element.from_bytes(bytes.fromhex(pk))
-            for pk in self.config["pool_public_keys"]
+            for pk in self.config.pool_public_keys
         ]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
@@ -189,8 +190,8 @@ class Farmer:
 
         log.info(f"Estimate: {estimate_secs}, rate: {self.proof_of_time_estimate_ips}")
         if (
-            estimate_secs < self.config["pool_share_threshold"]
-            or estimate_secs < self.config["propagate_threshold"]
+            estimate_secs < self.config.pool_share_threshold
+            or estimate_secs < self.config.propagate_threshold
         ):
 
             request = harvester_protocol.RequestProofOfSpace(
@@ -254,10 +255,10 @@ class Farmer:
         )
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
 
-        if estimate_secs < self.config["pool_share_threshold"]:
+        if estimate_secs < self.config.pool_share_threshold:
             # TODO: implement pooling
             pass
-        if estimate_secs < self.config["propagate_threshold"]:
+        if estimate_secs < self.config.propagate_threshold:
             pool_pk = bytes(response.proof.pool_public_key)
             if pool_pk not in self.pool_sks_map:
                 log.error(

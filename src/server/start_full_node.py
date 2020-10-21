@@ -3,6 +3,7 @@ import pathlib
 from multiprocessing import freeze_support
 from typing import Dict
 
+from src.config.full_node_config import FullNodeConfig
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.full_node.full_node import FullNode
@@ -20,28 +21,33 @@ SERVICE_NAME = "full_node"
 
 
 def service_kwargs_for_full_node(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
+    root_path: pathlib.Path,
+    config: FullNodeConfig,
+    consensus_constants: ConsensusConstants,
 ) -> Dict:
 
     api = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
 
+    listen_port = config.port
     kwargs = dict(
         root_path=root_path,
         api=api,
         node_type=NodeType.FULL_NODE,
-        advertised_port=config["port"],
+        advertised_port=listen_port,
         service_name=SERVICE_NAME,
-        upnp_ports=[config["port"]],
-        server_listen_ports=[config["port"]],
+        upnp_ports=[listen_port],
+        server_listen_ports=[listen_port],
         on_connect_callback=api._on_connect,
     )
-    if config["start_rpc_server"]:
-        kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
+    if config.start_rpc_server:
+        kwargs["rpc_info"] = (FullNodeRpcApi, config.rpc_port)
     return kwargs
 
 
 def main():
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = FullNodeConfig.from_dict(
+        load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    )
     kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 

@@ -3,12 +3,16 @@ import signal
 
 from secrets import token_bytes
 from typing import Dict, Tuple, List, Optional
+
+from src.config.farmer_config import FarmerConfig
+from src.config.full_node_config import FullNodeConfig
+from src.config.peer_info_config import PeerInfoConfig
+from src.config.timelord_config import TimelordConfig
 from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
 from src.server.server import ChiaServer
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain, bytes_to_mnemonic
-from src.server.connection import PeerInfo
 from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from src.server.start_farmer import service_kwargs_for_farmer
 from src.server.start_full_node import service_kwargs_for_full_node
@@ -77,6 +81,8 @@ async def setup_full_node(
         config["introducer_peer"]["port"] = introducer_port
     config["port"] = port
     config["rpc_port"] = port + 1000
+
+    config = FullNodeConfig.from_dict(config)
 
     if simulator:
         kwargs = service_kwargs_for_full_node_simulator(
@@ -167,7 +173,7 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
     kwargs.update(
         server_listen_ports=[port],
         advertised_port=port,
-        connect_peers=[PeerInfo(self_hostname, farmer_port)],
+        connect_peers=[PeerInfoConfig(host=self_hostname, port=farmer_port)],
         parse_cli_args=False,
     )
 
@@ -199,6 +205,11 @@ async def setup_farmer(
         config["full_node_peer"]["port"] = full_node_port
     else:
         del config["full_node_peer"]
+
+    config = FarmerConfig.from_dict(config)
+
+    config_pool = bt.config["pool"]
+    config_pool["xch_target_address"] = encode_puzzle_hash(bt.pool_ph)
 
     kwargs = service_kwargs_for_farmer(
         bt.root_path, config, config_pool, bt.keychain, consensus_constants
@@ -254,12 +265,17 @@ async def setup_vdf_clients(port):
 async def setup_timelord(
     port, full_node_port, sanitizer, consensus_constants: ConsensusConstants
 ):
-    config = bt.config["timelord"]
-    config["port"] = port
-    config["full_node_peer"]["port"] = full_node_port
-    config["sanitizer_mode"] = sanitizer
+    config = TimelordConfig.from_dict(bt.config["timelord"])
+    full_node_peer = config.full_node_peer.replace(port=full_node_port)
+
+    config = config.replace(
+        port=port,
+        full_node_peer=full_node_peer,
+        sanitizer_mode=sanitizer,
+    )
     if sanitizer:
-        config["vdf_server"]["port"] = 7999
+        vdf_server = config.vdf_server.replace(port=7999)
+        config = config.replace(vdf_server=vdf_server)
 
     kwargs = service_kwargs_for_timelord(
         bt.root_path, config, consensus_constants.DISCRIMINANT_SIZE_BITS

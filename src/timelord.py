@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 
 from chiavdf import create_discriminant
+from src.config.timelord_config import TimelordConfig
 from src.protocols import timelord_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -20,15 +21,15 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict, discriminant_size_bits: int):
+    def __init__(self, config: TimelordConfig, discriminant_size_bits: int):
         self.discriminant_size_bits = discriminant_size_bits
-        self.config: Dict = config
+        self.config: TimelordConfig = config
         self.ips_estimate = {
             socket.gethostbyname(k): v
             for k, v in list(
                 zip(
-                    self.config["vdf_clients"]["ip"],
-                    self.config["vdf_clients"]["ips_estimate"],
+                    self.config.vdf_clients["ip"],
+                    self.config.vdf_clients["ips_estimate"],
                 )
             )
         }
@@ -46,7 +47,7 @@ class Timelord:
         self.proof_count: Dict = {}
         self.avg_ips: Dict = {}
         self.discriminant_queue: List[Tuple[bytes32, uint128]] = []
-        self.max_connection_time = self.config["max_connection_time"]
+        self.max_connection_time = self.config.max_connection_time
         self.potential_free_clients: List = []
         self.free_clients: List[
             Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]
@@ -54,7 +55,7 @@ class Timelord:
         self.server: Optional[ChiaServer] = None
         self.vdf_server = None
         self._is_shutdown = False
-        self.sanitizer_mode = self.config["sanitizer_mode"]
+        self.sanitizer_mode = self.config.sanitizer_mode
         self.last_time_seen_discriminant: Dict = {}
         self.max_known_weights: List[uint128] = []
 
@@ -87,8 +88,8 @@ class Timelord:
 
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
-            self.config["vdf_server"]["host"],
-            self.config["vdf_server"]["port"],
+            self.config.vdf_server.host,
+            self.config.vdf_server.port,
         )
 
     def _close(self):
@@ -253,7 +254,7 @@ class Timelord:
         # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
         # the timelord tells the vdf_client what to execute.
         if not self.sanitizer_mode:
-            if self.config["fast_algorithm"]:
+            if self.config.fast_algorithm:
                 # Run n-wesolowski (fast) algorithm.
                 writer.write(b"N")
             else:

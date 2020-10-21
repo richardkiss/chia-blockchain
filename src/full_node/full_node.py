@@ -11,6 +11,7 @@ from chiabip158 import PyBIP158
 from chiapos import Verifier
 from blspy import G2Element, AugSchemeMPL
 
+from src.config.full_node_config import FullNodeConfig
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations
@@ -70,7 +71,7 @@ class FullNode:
     connection: aiosqlite.Connection
     sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
-    config: Dict
+    config: FullNodeConfig
     global_connections: Optional[PeerConnections]
     server: Optional[ChiaServer]
     log: logging.Logger
@@ -81,7 +82,7 @@ class FullNode:
 
     def __init__(
         self,
-        config: Dict,
+        config: FullNodeConfig,
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = None,
@@ -99,7 +100,7 @@ class FullNode:
 
         self.global_connections = None
 
-        self.db_path = path_from_root(root_path, config["database_path"])
+        self.db_path = path_from_root(root_path, config.database_path)
         mkdir(self.db_path.parent)
 
     async def _start(self):
@@ -125,18 +126,20 @@ class FullNode:
                 self.server,
                 self.root_path,
                 self.global_connections,
-                self.config["target_peer_count"]
-                - self.config["target_outbound_peer_count"],
-                self.config["target_outbound_peer_count"],
-                self.config["peer_db_path"],
-                self.config["introducer_peer"],
-                self.config["peer_connect_interval"],
+                self.config.target_peer_count - self.config.target_outbound_peer_count,
+                self.config.target_outbound_peer_count,
+                self.config.peer_db_path,
+                dict(
+                    host=self.config.introducer_peer.host,
+                    port=self.config.introducer_peer.port,
+                ),
+                self.config.peer_connect_interval,
                 self.log,
             )
             await self.full_node_peers.start()
         except Exception as e:
             self.log.error(f"Exception in peer discovery: {e}")
-        uncompact_interval = self.config["send_uncompact_interval"]
+        uncompact_interval = self.config.send_uncompact_interval
         if uncompact_interval > 0:
             self.broadcast_uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(uncompact_interval)
@@ -333,7 +336,7 @@ class FullNode:
 
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None
-        diff = self.config["target_peer_count"] - len(
+        diff = self.config.target_peer_count - len(
             self.global_connections.get_full_node_connections()
         )
         return diff if diff >= 0 else 0
@@ -1613,7 +1616,7 @@ class FullNode:
 
             if (
                 respond_block.block.height
-                > tip_height + self.config["sync_blocks_behind_threshold"]
+                > tip_height + self.config.sync_blocks_behind_threshold
             ):
                 async with self.blockchain.lock:
                     if self.sync_store.get_sync_mode():
