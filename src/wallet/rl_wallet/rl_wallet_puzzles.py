@@ -65,7 +65,9 @@ def rl_puzzle_for_pk(
             quote(1),
             equal(args(0), hexstr(origin_id)),
         ),
-        sexp(),
+        quote(
+            "(foo bar)"
+        ),  # this used to be `()` but that's not a legal condition. This one will be ignored
         fail(quote("Parent doesnt satisfy RL conditions")),
     )
     TEMPLATE_BLOCK_AGE = make_if(
@@ -106,7 +108,9 @@ def rl_puzzle_for_pk(
             quote(1),
             equal(hexstr(origin_id), args(5)),
         ),
-        sexp(),
+        quote(
+            "(bar foo)"
+        ),  # this used to be `()` but that's not a legal condition. This one will be ignored
         fail(quote("Parent doesnt satisfy RL conditions")),
     )
     CREATE_CONSOLIDATED = make_list(
