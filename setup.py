@@ -9,7 +9,7 @@ dependencies = [
     "chiapos==0.12.44",  # proof of space
     "clvm==0.8.9",
     "clvm_rs==0.1.3",  # noqa
-    "clvm_tools==0.3.5",  # noqa
+    "clvm_tools==0.4.1",  # noqa
     "aiohttp==3.7.3",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@47c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
@@ -18,7 +18,7 @@ dependencies = [
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     #  "cryptography==3.4.1",  # Python cryptography library for TLS - keyring conflict
     "cryptography==3.3.2",  # Python cryptography library for TLS
-    "keyring==21.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyring==22.0.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     "PyYAML==5.4.1",  # Used for config file format
     "setproctitle==1.2.2",  # Gives the chia processes readable names
