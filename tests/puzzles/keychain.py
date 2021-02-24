@@ -22,7 +22,7 @@ class Keychain:
     def sign(self, public_key: bytes, message_hash) -> G2Element:
         secret_exponent = self._db.get(public_key)
         if secret_exponent is None:
-            raise ValueError("unknown pubkey %s" % public_key)
+            raise ValueError("unknown pubkey %s" % public_key.hex())
         private_key = PrivateKey.from_bytes((secret_exponent % GROUP_ORDER).to_bytes(32, "big"))
         return AugSchemeMPL.sign(private_key, message_hash)
 

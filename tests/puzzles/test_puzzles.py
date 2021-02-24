@@ -1,24 +1,11 @@
-import blspy
+from blspy import G1Element
 
 from typing import Iterable, List, Tuple
 from unittest import TestCase
 
-# from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.program import Program
-from src.types.coin_solution import CoinSolution
-
-# from chiasim.hack.keys import (
-#    bls_private_key_for_index,
-#    build_spend_bundle,
-#    conditions_for_payment,
-#    ,
-#    puzzle_hash_for_index,
-#    DEFAULT_KEYCHAIN,
-# )
-# from chiasim.storage import RAM_DB
-
-
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.wallet.puzzles import (
     p2_conditions,
@@ -166,8 +153,6 @@ class TestPuzzles(TestCase):
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
             hidden_public_key, hidden_puzzle
         )
-        puzzle_hash = puzzle.get_tree_hash()
-
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_with_hidden_puzzle(
             hidden_public_key, hidden_puzzle, Program.to(0)
         )
@@ -183,8 +168,6 @@ class TestPuzzles(TestCase):
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
             hidden_public_key, hidden_puzzle
         )
-        puzzle_hash = puzzle.get_tree_hash()
-
         payable_payments, payable_conditions = default_payments_and_conditions(5)
 
         delegated_puzzle = p2_conditions.puzzle_for_conditions(payable_conditions)
@@ -202,8 +185,13 @@ class TestPuzzles(TestCase):
         synthetic_offset = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_offset(
             hidden_public_key, hidden_puzzle_hash
         )
+
+        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
+        assert synthetic_public_key == synthetic_offset * G1Element.generator() + hidden_pub_key_point
+
         secret_exponent = DEFAULT_KEYCHAIN.secret_exponent_for_public_key(hidden_public_key)
-        assert bytes(blspy.G1Element.generator() * secret_exponent) == hidden_public_key
+        assert G1Element.generator() * secret_exponent == hidden_pub_key_point
+
         synthetic_secret_exponent = secret_exponent + synthetic_offset
         DEFAULT_KEYCHAIN.add_secret_exponents([synthetic_secret_exponent])
 
