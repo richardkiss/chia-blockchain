@@ -90,9 +90,9 @@ def solution_with_hidden_puzzle(
     hidden_puzzle: Program,
     solution_to_hidden_puzzle: Program,
 ) -> Program:
-    synthetic_public_key = calculate_synthetic_public_key(hidden_public_key, hidden_puzzle)
+    synthetic_public_key = calculate_synthetic_public_key(hidden_public_key, hidden_puzzle.get_tree_hash())
     puzzle = puzzle_for_synthetic_public_key(synthetic_public_key)
-    return Program.to([puzzle, [hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle]])
+    return Program.to([hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle])
 
 
 def solution_for_conditions(conditions) -> Program:

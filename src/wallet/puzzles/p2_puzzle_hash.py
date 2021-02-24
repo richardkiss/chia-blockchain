@@ -19,6 +19,6 @@ def puzzle_for_puzzle_hash(inner_puzzle_hash) -> Program:
 
 
 def solution_for_puzzle_and_solution(inner_puzzle, inner_puzzle_solution) -> Program:
-    inner_puzzle_hash = Program.to(inner_puzzle).tree_hash()
+    inner_puzzle_hash = Program.to(inner_puzzle).get_tree_hash()
     puzzle_reveal = puzzle_for_puzzle_hash(inner_puzzle_hash)
     return Program.to([puzzle_reveal, inner_puzzle_solution])
