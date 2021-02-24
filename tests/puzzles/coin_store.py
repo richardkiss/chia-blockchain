@@ -7,7 +7,6 @@ from src.types.announcement import Announcement
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_record import CoinRecord
-from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import created_announcements_for_conditions_dict, conditions_dict_for_solution
 from src.util.ints import uint32, uint64
@@ -21,13 +20,6 @@ class BadSpendBundleError(Exception):
 class CoinTimestamp:
     seconds: int
     height: int
-
-
-# @dataclass
-# class CoinEntry:
-#    coin: Coin
-#    birthday: CoinTimestamp
-#    spent_height: Optional[CoinTimestamp] = None
 
 
 class CoinStore:

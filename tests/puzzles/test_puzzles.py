@@ -62,18 +62,18 @@ def run_test(
             assert 0
 
 
-def default_payments_and_conditions(initial_index: int = 1) -> Tuple[List[Tuple[bytes32, int]], List[Program]]:
+def default_payments_and_conditions(initial_index: int = 1) -> Tuple[List[Tuple[bytes32, int]], Program]:
     payments = [
         (puzzle_hash_for_index(initial_index + 1), initial_index * 1000),
         (puzzle_hash_for_index(initial_index + 2), (initial_index + 1) * 1000),
     ]
 
     conditions = conditions_for_payment(payments)
-    return payments, conditions
+    return payments, Program.to(conditions)
 
 
 class TestPuzzles(TestCase):
-    def ztest_p2_conditions(self):
+    def test_p2_conditions(self):
         payments, conditions = default_payments_and_conditions()
 
         puzzle = p2_conditions.puzzle_for_conditions(conditions)
@@ -81,52 +81,51 @@ class TestPuzzles(TestCase):
 
         run_test(puzzle, solution, payments)
 
-    def ztest_p2_delegated_conditions(self):
+    def test_p2_delegated_conditions(self):
         payments, conditions = default_payments_and_conditions()
 
         pk = public_key_for_index(1)
 
         puzzle = p2_delegated_conditions.puzzle_for_pk(pk)
-        solution = puzzle.to(p2_delegated_conditions.solution_for_conditions(puzzle, conditions))
+        solution = p2_delegated_conditions.solution_for_conditions(conditions)
 
         run_test(puzzle, solution, payments)
 
-    def ztest_p2_delegated_puzzle_simple(self):
+    def test_p2_delegated_puzzle_simple(self):
         payments, conditions = default_payments_and_conditions()
 
         pk = public_key_for_index(1)
 
-        puzzle_program = p2_delegated_puzzle.puzzle_for_pk(pk)
-        solution = p2_delegated_puzzle.solution_for_conditions(puzzle_program, conditions)
+        puzzle = p2_delegated_puzzle.puzzle_for_pk(pk)
+        solution = p2_delegated_puzzle.solution_for_conditions(conditions)
 
-        run_test(puzzle_program, solution, payments)
+        run_test(puzzle, solution, payments)
 
-    def ztest_p2_delegated_puzzle_graftroot(self):
+    def test_p2_delegated_puzzle_graftroot(self):
         payments, conditions = default_payments_and_conditions()
 
         delegated_puzzle = p2_delegated_conditions.puzzle_for_pk(public_key_for_index(8))
-        delegated_solution = p2_delegated_conditions.solution_for_conditions(delegated_puzzle, conditions)
+        delegated_solution = p2_delegated_conditions.solution_for_conditions(conditions)
 
         puzzle_program = p2_delegated_puzzle.puzzle_for_pk(public_key_for_index(1))
-        puzzle_hash = puzzle_program.get_tree_hash()
-        solution = p2_delegated_puzzle.solution_for_delegated_puzzle(puzzle_program, delegated_solution)
+        solution = p2_delegated_puzzle.solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
-        run_test(puzzle_hash, solution, payments)
+        run_test(puzzle_program, solution, payments)
 
-    def ztest_p2_puzzle_hash(self):
+    def test_p2_puzzle_hash(self):
         payments, conditions = default_payments_and_conditions()
 
-        underlying_puzzle = p2_delegated_conditions.puzzle_for_pk(public_key_for_index(4))
-        underlying_solution = p2_delegated_conditions.solution_for_conditions(underlying_puzzle, conditions)
-        underlying_puzzle_hash = underlying_puzzle.get_tree_hash()
+        inner_puzzle = p2_delegated_conditions.puzzle_for_pk(public_key_for_index(4))
+        inner_solution = p2_delegated_conditions.solution_for_conditions(conditions)
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
 
-        puzzle_program = p2_puzzle_hash.puzzle_for_puzzle_hash(underlying_puzzle_hash)
-        puzzle_hash = puzzle_program.get_tree_hash()
-        solution = p2_puzzle_hash.solution_for_puzzle_and_solution(underlying_puzzle, underlying_solution)
+        puzzle_program = p2_puzzle_hash.puzzle_for_inner_puzzle_hash(inner_puzzle_hash)
+        assert puzzle_program == p2_puzzle_hash.puzzle_for_inner_puzzle(inner_puzzle)
+        solution = p2_puzzle_hash.solution_for_inner_puzzle_and_inner_solution(inner_puzzle, inner_solution)
 
-        run_test(puzzle_hash, solution, payments)
+        run_test(puzzle_program, solution, payments)
 
-    def ztest_p2_m_of_n_delegated_puzzle(self):
+    def test_p2_m_of_n_delegated_puzzle(self):
         payments, conditions = default_payments_and_conditions()
 
         pks = [public_key_for_index(_) for _ in range(1, 6)]
@@ -138,11 +137,10 @@ class TestPuzzles(TestCase):
         puzzle_program = p2_m_of_n_delegate_direct.puzzle_for_m_of_public_key_list(M, pks)
         selectors = [1, [], [], 1, 1]
         solution = p2_m_of_n_delegate_direct.solution_for_delegated_puzzle(
-            M, pks, selectors, delegated_puzzle, delegated_solution
+            M, selectors, delegated_puzzle, delegated_solution
         )
-        puzzle_hash = puzzle_program.get_tree_hash()
 
-        run_test(puzzle_hash, solution, payments)
+        run_test(puzzle_program, solution, payments)
 
     def test_p2_delegated_puzzle_or_hidden_puzzle_with_hidden_puzzle(self):
         payments, conditions = default_payments_and_conditions()
@@ -153,7 +151,7 @@ class TestPuzzles(TestCase):
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
             hidden_public_key, hidden_puzzle
         )
-        solution = p2_delegated_puzzle_or_hidden_puzzle.solution_with_hidden_puzzle(
+        solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
             hidden_public_key, hidden_puzzle, Program.to(0)
         )
 

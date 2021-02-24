@@ -44,8 +44,3 @@ def puzzle_hash_for_index(index: int) -> bytes32:
 def conditions_for_payment(puzzle_hash_amount_pairs) -> List[Program]:
     conditions = [make_create_coin_condition(ph, amount) for ph, amount in puzzle_hash_amount_pairs]
     return conditions
-
-
-def spend_coin(coin, conditions, index, keychain=DEFAULT_KEYCHAIN):
-    solution = p2_delegated_puzzle.solution_for_conditions(puzzle_program_for_index(index), conditions)
-    return build_spend_bundle(coin, solution, keychain)
