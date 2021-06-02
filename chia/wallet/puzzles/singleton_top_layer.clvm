@@ -33,17 +33,6 @@
       )
     )
 
-  ;; boolean and macro
-  ;; This lets you write something like (if (and COND1 COND2 COND3) (do-something) (do-something-else))
-  (defmacro and ARGS
-    (if ARGS
-        (qq (if (unquote (f ARGS))
-                (unquote (c and (r ARGS)))
-              ()
-              ))
-      1)
-    )
-
     (defun-inline mod-hash-for-singleton-struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
     (defun-inline launcher-id-for-singleton-struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
     (defun-inline launcher-puzzle-hash-for-singleton-struct (SINGLETON_STRUCT) (r (r SINGLETON_STRUCT)))
