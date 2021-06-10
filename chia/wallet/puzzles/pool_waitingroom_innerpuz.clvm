@@ -39,7 +39,7 @@
         (list CREATE_COIN my_inner_puzzle_hash my_amount)
         (list CREATE_COIN POOL_PUZZLE_HASH pool_reward_amount)
         (list CREATE_PUZZLE_ANNOUNCEMENT pool_reward_id)
-        (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id 0x80))
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id '$'))
     )
   )
 
