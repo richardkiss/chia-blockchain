@@ -82,8 +82,11 @@ class Program(SExp):
         cost, r = curry(self, list(args))
         return Program.to(r)
 
-    def uncurry(self) -> Optional[Tuple["Program", "Program"]]:
-        return uncurry(self)
+    def uncurry(self) -> Tuple["Program", "Program"]:
+        r = uncurry(self)
+        if r is None:
+            return self, self.to(0)
+        return r
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())

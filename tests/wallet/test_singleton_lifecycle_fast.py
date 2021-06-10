@@ -117,6 +117,8 @@ class SingletonWallet:
 
     def inner_puzzle(self, puzzle_db: PuzzleDB) -> Optional[Program]:
         puzzle = puzzle_db.puzzle_for_hash(self.current_state.puzzle_hash)
+        if puzzle is None:
+            return None
         return self.inner_puzzle_for_puzzle(puzzle)
 
     def inner_puzzle_for_puzzle(self, puzzle: Program) -> Optional[Program]:
@@ -131,7 +133,9 @@ class SingletonWallet:
     def coin_spend_for_conditions(self, puzzle_db: PuzzleDB, **kwargs) -> CoinSpend:
         coin = self.current_state
         puzzle_reveal = puzzle_db.puzzle_for_hash(coin.puzzle_hash)
+        assert puzzle_reveal is not None
         inner_puzzle = self.inner_puzzle_for_puzzle(puzzle_reveal)
+        assert inner_puzzle is not None
         inner_solution = solve_puzzle(puzzle_db, inner_puzzle, **kwargs)
         solution = inner_solution.to([self.lineage_proof, coin.amount, inner_solution.rest()])
         return CoinSolution(coin, puzzle_reveal, solution)
@@ -145,7 +149,9 @@ class SingletonWallet:
                     if coin.amount & 1 == 1:
                         parent_puzzle_hash = coin_spend.coin.puzzle_hash
                         parent_puzzle = puzzle_db.puzzle_for_hash(parent_puzzle_hash)
+                        assert parent_puzzle is not None
                         parent_inner_puzzle = self.inner_puzzle_for_puzzle(parent_puzzle)
+                        assert parent_inner_puzzle is not None
                         parent_inner_puzzle_hash = parent_inner_puzzle.get_tree_hash()
                         lineage_proof = Program.to(
                             [self.current_state.parent_coin_info, parent_inner_puzzle_hash, coin.amount]
@@ -227,7 +233,9 @@ def p2_singleton_puzzle_hash_for_launcher(launcher_id: Program, launcher_puzzle_
 def claim_p2_singleton(
     puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, p2_singleton_coin: Coin, pool_reward_height: int
 ) -> Tuple[CoinSolution, List[Program]]:
-    inner_puzzle_hash = singleton_wallet.inner_puzzle(puzzle_db).get_tree_hash()
+    inner_puzzle = singleton_wallet.inner_puzzle(puzzle_db)
+    assert inner_puzzle
+    inner_puzzle_hash = inner_puzzle.get_tree_hash()
     p2_singleton_solution = Program.to([inner_puzzle_hash, p2_singleton_coin.name()])
     p2_singleton_coin_solution = CoinSolution(
         p2_singleton_coin,
@@ -272,6 +280,12 @@ def create_throwaway_pubkey(seed: bytes) -> G1Element:
     return G1Element.generator()
 
 
+def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent=True):
+    coin_record = coin_store.coin_record(coin.name())
+    assert coin_record is not None
+    assert coin_record.spent is is_spent
+
+
 def spend_coin_to_singleton(
     puzzle_db: PuzzleDB, launcher_puzzle: Program, coin_store: CoinStore, now: CoinTimestamp
 ) -> Tuple[List[Coin], List[CoinSolution]]:
@@ -300,13 +314,13 @@ def spend_coin_to_singleton(
 
     launcher_coin = launcher_spend_bundle.coin_solutions[0].coin
 
-    assert coin_store.coin_record(launcher_coin.name()).spent
-    assert coin_store.coin_record(farmed_coin.name()).spent
+    assert_coin_spent(coin_store, launcher_coin)
+    assert_coin_spent(coin_store, farmed_coin)
 
     singleton_expected_puzzle = singleton_puzzle(launcher_id, launcher_puzzle_hash, initial_singleton_puzzle)
     singleton_expected_puzzle_hash = singleton_expected_puzzle.get_tree_hash()
     expected_singleton_coin = Coin(launcher_coin.name(), singleton_expected_puzzle_hash, launcher_amount)
-    assert coin_store.coin_record(expected_singleton_coin.name()).spent is False
+    assert_coin_spent(coin_store, expected_singleton_coin, is_spent=False)
 
     return additions, removals
 
