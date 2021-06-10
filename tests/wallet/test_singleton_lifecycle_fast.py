@@ -280,7 +280,6 @@ def spend_coin_to_singleton(
     metadata = [("foo", "bar")]
 
     now = CoinTimestamp(10012300, 1)
-    parent_coin_amount = 100000
     farmed_coin = coin_store.farm_coin(ANYONE_CAN_SPEND_PUZZLE.get_tree_hash(), now, amount=farmed_coin_amount)
     now.seconds += 500
     now.height += 1
@@ -616,6 +615,7 @@ def test_lifecycle_with_coinstore_as_wallet():
         PUZZLE_DB, conditions=[[ConditionOpcode.CREATE_COIN, 0, -113]]
     )
     spend_bundle = SpendBundle([coin_spend], G2Element())
+    debug_spend_bundle(spend_bundle)
 
     additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
     update_count = SINGLETON_WALLET.update_state(PUZZLE_DB, removals)
