@@ -612,7 +612,9 @@ def test_lifecycle_with_coinstore_as_wallet():
     #######
     # now spend to oblivion with the `-113` hack
 
-    coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(PUZZLE_DB, conditions=[[ConditionOpcode.CREATE_COIN, 0, -113]])
+    coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(
+        PUZZLE_DB, conditions=[[ConditionOpcode.CREATE_COIN, 0, -113]]
+    )
     spend_bundle = SpendBundle([coin_spend], G2Element())
 
     additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)

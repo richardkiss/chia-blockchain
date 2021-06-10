@@ -41,9 +41,7 @@ def test_only_odd_coins():
     # (MOD_HASH LAUNCHER_ID INNERPUZ parent_info my_amount inner_solution)
     solution = Program.to(
         [
-            (did_core_hash,
-            (LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH)),
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             Program.to(binutils.assemble("(q (51 0xcafef00d 200))")),
             [0xDEADBEEF, 0xCAFEF00D, 200],
             200,
@@ -59,9 +57,7 @@ def test_only_odd_coins():
 
     solution = Program.to(
         [
-            (did_core_hash,
-            (LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH)),
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFED00D, 210],
             205,
@@ -78,9 +74,7 @@ def test_only_one_odd_coin_created():
     did_core_hash = SINGLETON_MOD.get_tree_hash()
     solution = Program.to(
         [
-            (did_core_hash,
-            (LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH)),
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
@@ -95,9 +89,7 @@ def test_only_one_odd_coin_created():
         assert False
     solution = Program.to(
         [
-            (did_core_hash,
-            (LAUNCHER_ID,
-            LAUNCHER_PUZZLE_HASH)),
+            (did_core_hash, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)),
             1,
             [0xDEADBEEF, 0xCAFEF00D, 411],
             411,
