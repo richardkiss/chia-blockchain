@@ -1,5 +1,5 @@
 import io
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM, SExp
 from clvm import run_program as default_run_program
