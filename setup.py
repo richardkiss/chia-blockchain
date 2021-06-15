@@ -78,6 +78,7 @@ kwargs = dict(
         "chia.types",
         "chia.util",
         "chia.wallet",
+        "chia.wallet.exp",
         "chia.wallet.puzzles",
         "chia.wallet.rl_wallet",
         "chia.wallet.cc_wallet",
