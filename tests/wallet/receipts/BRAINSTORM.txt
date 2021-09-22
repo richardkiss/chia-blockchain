@@ -1,0 +1,105 @@
+What does the api look like? Let's think about proving address A receives amount M.
+
+
+receipt_puzzle_for_payment(address, amount, *notes) -> Program
+  receipt program: looks like `((CREATE_COIN address amount *notes) (CREATE_PUZZLE_ANNOUNCEMENT 0))`
+
+generate_assert_puzzle_announcement_condition_for_receipt_puzzle(receipt_puzzle, puzzle_transformer, announcement_transformer = lambda x: x) -> Program
+   that looks like `(ASSERT_PUZZLE_ANNOUNCEMENT xxxxxxxxx)` for an appropriate `xxxxxx`
+
+
+-- MAKER (regular chia) --
+
+I want a coin C to be spent iff an amount M gets sent to address A. I need to add a condition to it of the form
+
+`(ASSERT_PUZZLE_ANNOUNCEMENT xxxxxxxxx)` for an appropriate `xxxxxx`
+
+I call `receipt_puzzle_for_payment` with A and M to get a puzzle.
+
+I call `generate_assert_puzzle_announcement_condition_for_receipt_puzzle` to get the appropriate condition.
+
+I broadcast C along with a solution where C is spent and asserts the announcement. I also provide pre-images of the announcement (the intermediate receipt coin), so others know how to generate it to collect C in a partially signed transaction.
+
+-- TAKER --
+
+I see a coin C along with the announcement it expects to consume. I get the puzzle for it, and the intermediate coin.
+
+I want to get paid. I generate a payment P_0 from D to myself, adding the value in C. It also generates a coin announcement K.
+
+I generate a payment P_1 to the intermediate receipt coin R that depends upon K, and a spend of R P_2. I create a `SpendBundle` with P_0, P_1, P_2, and the spend of C. That's becomes a SpendBundle, which I send to the mempool.
+
+
+------------
+
+What should the tests do?
+
+Test 1: cat maker
+
+A maker who spends C_0 XCHCAT:xxxx and expects a specific amount of C_1 XCH (for a fixed xxxx). Create an offer.
+
+This offer goes to a taker, who has C_1 XCHCAT:xxxx and who collects the C_0 XCH by generating the receipt.
+
+
+
+Test 2: chia maker
+
+A maker who spends C_0 XCH and expects a specific amount of C_1 XCHCAT:xxxx (for a fixed xxxx). Create an offer.
+
+This offer goes to a taker, who has C_1 XCHCAT:xxxx and who collects the C_0 XCH by generating the receipt.
+
+Make has C_0 XCH
+
+
+FAILURE CASES:
+
+Test 3: create an offer. Ensure we can't spend it without payment.
+
+------------
+
+Offer files:
+
+- they must contain a `SpendBundle` along with metadata giving hints on how to make the `SpendBundle` valid
+- might possibly be a generalization of `IncompleteSpendBundle`
+
+- for an offer file, I want
+  - my coin spend, with the signature separated out into the metadata section(s) so it can be processed separately
+
+------------
+
+Analysis of ring vs star:
+
+------------
+
+Analysis of ring security with reduction of things checked:
+
+;;  prev_coin_id: the id for the previous coin
+;;  this_coin_bundle: ((parent_id puzzle_hash amount) . lineage_proof)
+;;  next_coin_info: (parent_id inner_puzzle_hash amount)
+
+      prev_coin_id             ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+      this_coin_bundle         ;; verified with ASSERT_MY_COIN_ID
+      next_coin_info         ;; used to generate ASSERT_COIN_ANNOUNCEMENT
+      prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+
+Ring of size 1:
+One coin C, when spent, we set
+  `prev_coin_id` to C
+  `this_coin_bundle` to ((parent_id puzzle_hash amount) . lineage_proof)
+  `next_coin_info` to (parent_id inner_puzzle_hash amount)
+
+We do `ASSERT_COIN_ANNOUNCEMENT` with `this_coin_id` `this_subtotal` and `next_coin_id`.
+
+We do `CREATE_COIN_ANNOUNCEMENT` with `prev_coin_id` `prev_subtotal`
+
+So in a ring A => B
+
+we have B announce A's coin id and subtotal.
+
+In our ring of size 1, C announces its coin id and subtotal. And it consumes its coin id and subtotal. So it "before" and "after" subtotal must be zero,
+so its delta must be zero too.
+
+
+So now suppose we have N+1 CAT coins spent, C_0, ..., C_N.
+
+C_0 creates only one announcement (in the correct namespace), with C_N's coin id and subtotal.
+C_0 asserts one announcement, with its subtotal and C1's coin id, ie. C_1's coin 

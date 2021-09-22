@@ -173,18 +173,17 @@
      )
 
      ;; calculate the hash of an announcement
-     (defun-inline calculate_annoucement_id (this_coin_id this_subtotal next_coin_id cat_mod_struct)
+     (defun-inline calculate_annoucement_id (this_coin_id this_subtotal next_coin_id)
        ; NOTE: the next line containts a bug, as sha256tree1 ignores `this_subtotal`
        (sha256 next_coin_id 0xcb this_coin_id this_subtotal)
      )
 
      ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
-     (defun-inline create_assert_next_announcement_condition (this_coin_id this_subtotal next_coin_id cat_mod_struct)
+     (defun-inline create_assert_next_announcement_condition (this_coin_id this_subtotal next_coin_id)
        (list ASSERT_COIN_ANNOUNCEMENT
              (calculate_annoucement_id this_coin_id
-                                            this_subtotal
-                                            next_coin_id
-                                            cat_mod_struct
+                                       this_subtotal
+                                       next_coin_id
              )
        )
      )
@@ -233,7 +232,7 @@
          cat_mod_struct
        )
          (c (create_announcement_condition prev_coin_id prev_subtotal)
-           (c (create_assert_next_announcement_condition this_coin_id this_subtotal next_coin_id cat_mod_struct)
+           (c (create_assert_next_announcement_condition this_coin_id this_subtotal next_coin_id)
              morphed_conditions)
          )
       )
