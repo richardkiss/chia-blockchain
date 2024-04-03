@@ -30,16 +30,23 @@ class Annotation:
         return cls(result.group(1).strip())
 
 
+ANNOTATION_MAP : dict[Path, Annotation] = {}
+
+
 @dataclass(frozen=True)
 class ChiaFile:
     path: Path
-    annotations: Optional[Annotation] = None
 
     @classmethod
     def parse(cls, file_path: Path) -> ChiaFile:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
             file_string = f.read()
-            return cls(file_path, Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None)
+            ANNOTATION_MAP[file_path] = Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None
+            return cls(file_path)
+
+    @property
+    def annotations(self) -> Optional[Annotation]:
+        return ANNOTATION_MAP.get(self.path)
 
 
 def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[Path]]:
