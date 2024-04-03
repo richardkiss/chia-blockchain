@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import click
 import yaml
 
+from .package_annotation_map import PATH_TO_PACKAGE
 
 @dataclass(frozen=True)
 class Annotation:
@@ -30,8 +31,8 @@ class Annotation:
         return cls(result.group(1).strip())
 
 
-ANNOTATION_MAP : dict[Path, Annotation] = {}
 
+ANNOTATION_MAP : dict[Path, Annotation] = {Path(k): Annotation(v) for k, v in PATH_TO_PACKAGE.items()}
 
 @dataclass(frozen=True)
 class ChiaFile:
