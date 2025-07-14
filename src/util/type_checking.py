@@ -1,7 +1,6 @@
-import sys
 import dataclasses
-from typing import Any, List, Type, Union, get_type_hints, Tuple, Optional
-
+import sys
+from typing import Any, List, Optional, Tuple, Type, Union, get_type_hints
 
 if sys.version_info < (3, 8):
 
@@ -13,7 +12,6 @@ if sys.version_info < (3, 8):
 
 
 else:
-
     from typing import get_args, get_origin
 
 
@@ -83,7 +81,7 @@ def strictdataclass(cls: Any):
         def __post_init__(self):
             fields = get_type_hints(self)
             data = self.__dict__
-            for (f_name, f_type) in fields.items():
+            for f_name, f_type in fields.items():
                 if f_name not in data:
                     raise ValueError(f"Field {f_name} not present")
                 object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))

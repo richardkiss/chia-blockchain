@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from typing import List
 
-from src.types.blockchain_format.coin import Coin
+from blspy import AugSchemeMPL, G2Element
+
 from src.types.announcement import Announcement
+from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
+
 from .coin_solution import CoinSolution
-from blspy import G2Element, AugSchemeMPL
 
 
 @dataclass(frozen=True)
@@ -45,11 +47,11 @@ class SpendBundle(Streamable):
         return items
 
     def removals(self) -> List[Coin]:
-        """ This should be used only by wallet"""
+        """This should be used only by wallet"""
         return [_.coin for _ in self.coin_solutions]
 
     def fees(self) -> int:
-        """ Unsafe to use for fees validation!!! """
+        """Unsafe to use for fees validation!!!"""
         amount_in = sum(_.amount for _ in self.removals())
         amount_out = sum(_.amount for _ in self.additions())
 

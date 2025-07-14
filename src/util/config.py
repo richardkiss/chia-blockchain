@@ -1,12 +1,13 @@
 import argparse
-import pkg_resources
-import sys
-import yaml
-import shutil
 import os
-
+import shutil
+import sys
 from pathlib import Path
-from typing import Dict, Any, Callable, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
+
+import pkg_resources
+import yaml
+
 from src.util.path import mkdir
 
 
@@ -51,7 +52,7 @@ def load_config(
         print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
-    r = yaml.safe_load(open(path, "r"))
+    r = yaml.safe_load(open(path))
     if sub_config is not None:
         r = r.get(sub_config)
     return r

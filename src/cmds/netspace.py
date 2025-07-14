@@ -1,12 +1,13 @@
-import click
-import aiohttp
 import asyncio
-from src.util.config import load_config
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint16
+
+import aiohttp
+import click
 
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
+from src.util.byte_types import hexstr_to_bytes
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.ints import uint16
 
 
 async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) -> None:
@@ -61,7 +62,7 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
                 f"VDF Iterations:   {newer_block_header.total_iters}\n"
                 f"Header Hash:      0x{newer_block_header.header_hash}\n"
             )
-            network_space_terabytes_estimate = network_space_bytes_estimate / 1024 ** 4
+            network_space_terabytes_estimate = network_space_bytes_estimate / 1024**4
             if network_space_terabytes_estimate > 1024:
                 print(f"The network has an estimated {network_space_terabytes_estimate / 1024:.3f} PiB")
             else:

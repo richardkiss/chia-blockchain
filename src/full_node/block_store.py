@@ -1,14 +1,15 @@
 import logging
-import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
+import aiosqlite
+
+from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from src.util.ints import uint32
-from src.consensus.block_record import BlockRecord
 from src.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
@@ -141,7 +142,7 @@ class BlockStore:
             return []
 
         heights_db = tuple(heights)
-        formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights_db) - 1)}?)'
+        formatted_str = f"SELECT block from full_blocks WHERE height in ({'?,' * (len(heights_db) - 1)}?)"
         cursor = await self.db.execute(formatted_str, heights_db)
         rows = await cursor.fetchall()
         await cursor.close()
@@ -157,7 +158,7 @@ class BlockStore:
             return []
 
         header_hashes_db = tuple([hh.hex() for hh in header_hashes])
-        formatted_str = f'SELECT block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        formatted_str = f"SELECT block from full_blocks WHERE header_hash in ({'?,' * (len(header_hashes_db) - 1)}?)"
         cursor = await self.db.execute(formatted_str, header_hashes_db)
         rows = await cursor.fetchall()
         await cursor.close()
@@ -177,7 +178,6 @@ class BlockStore:
         start: int,
         stop: int,
     ) -> Dict[bytes32, HeaderBlock]:
-
         formatted_str = f"SELECT header_hash,block from full_blocks WHERE height >= {start} and height <= {stop}"
 
         cursor = await self.db.execute(formatted_str)

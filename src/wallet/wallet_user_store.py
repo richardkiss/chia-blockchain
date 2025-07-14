@@ -1,6 +1,7 @@
-from typing import Optional, List
+from typing import List, Optional
 
 import aiosqlite
+
 from src.util.ints import uint32
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
@@ -21,13 +22,11 @@ class WalletUserStore:
         self.db_connection = connection
 
         await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS users_wallets("
-                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                " name text,"
-                " wallet_type int,"
-                " data text)"
-            )
+            "CREATE TABLE IF NOT EXISTS users_wallets("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            " name text,"
+            " wallet_type int,"
+            " data text)"
         )
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on users_wallets(name)")

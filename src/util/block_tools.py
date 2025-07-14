@@ -9,56 +9,56 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Callable
+from typing import Callable, Dict, List, Optional, Tuple
 
-from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.deficit import calculate_deficit
-
-from src.cmds.init import create_default_chia_config, create_all_ssl
+from src.cmds.init import create_all_ssl, create_default_chia_config
 from src.cmds.plots import create_plots
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import (
-    calculate_ip_iters,
-    calculate_iterations_quality,
-    calculate_sp_iters,
-    calculate_sp_interval_iters,
-    is_overflow_block,
-)
-from src.consensus.full_block_to_block_record import block_to_block_record
-from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from src.full_node.signage_point import SignagePoint
-from src.consensus.block_record import BlockRecord
-from src.consensus.vdf_info_computation import get_signage_point_vdf_info
-from src.plotting.plot_tools import load_plots, PlotInfo
-from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.blockchain_format.coin import Coin
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
-from src.types.blockchain_format.pool_target import PoolTarget
-from src.types.blockchain_format.proof_of_space import ProofOfSpace
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.slots import (
-    InfusedChallengeChainSubSlot,
-    ChallengeChainSubSlot,
-    RewardChainSubSlot,
-    SubSlotProofs,
-)
-from src.types.spend_bundle import SpendBundle
-from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.unfinished_block import UnfinishedBlock
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block,
 )
+from src.consensus.block_record import BlockRecord
+from src.consensus.blockchain_interface import BlockchainInterface
+from src.consensus.coinbase import create_puzzlehash_for_pk
+from src.consensus.constants import ConsensusConstants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.consensus.deficit import calculate_deficit
+from src.consensus.full_block_to_block_record import block_to_block_record
+from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from src.consensus.pot_iterations import (
+    calculate_ip_iters,
+    calculate_iterations_quality,
+    calculate_sp_interval_iters,
+    calculate_sp_iters,
+    is_overflow_block,
+)
+from src.consensus.vdf_info_computation import get_signage_point_vdf_info
+from src.full_node.signage_point import SignagePoint
+from src.plotting.plot_tools import PlotInfo, load_plots
+from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import (
+    ChallengeChainSubSlot,
+    InfusedChallengeChainSubSlot,
+    RewardChainSubSlot,
+    SubSlotProofs,
+)
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
+from src.types.spend_bundle import SpendBundle
+from src.types.unfinished_block import UnfinishedBlock
 from src.util.bech32m import encode_puzzle_hash
 from src.util.block_cache import BlockCache
 from src.util.config import load_config, save_config
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64, uint128, uint8
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.util.path import mkdir
 from src.util.vdf_prover import get_vdf_info_and_proof
@@ -68,11 +68,10 @@ from src.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from src.consensus.default_constants import DEFAULT_CONSTANTS
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
-        "DIFFICULTY_STARTING": 2 ** 12,
+        "DIFFICULTY_STARTING": 2**12,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
@@ -83,7 +82,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "EPOCH_BLOCKS": 280,
         "BLOCKS_CACHE_SIZE": 280 + 3 * 50,  # Coordinate with the above values
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
-        "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
+        "SUB_SLOT_ITERS_STARTING": 2**10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
         * 24
@@ -434,7 +433,7 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
 
                         blocks[full_block.header_hash] = block_record
-                        log.info(f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}")
+                        log.info(f"Created block {block_record.height} ove=False, iters {block_record.total_iters}")
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -568,7 +567,7 @@ class BlockTools:
             sub_slots_finished += 1
             log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
-                f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
+                f"{(len(block_list) - initial_block_list_len) / sub_slots_finished}"
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
@@ -659,7 +658,7 @@ class BlockTools:
 
                         block_list.append(full_block)
                         blocks_added_this_sub_slot += 1
-                        log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
+                        log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list
@@ -882,7 +881,6 @@ class BlockTools:
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
-
                     required_iters = calculate_iterations_quality(
                         constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,

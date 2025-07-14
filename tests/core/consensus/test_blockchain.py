@@ -1,9 +1,9 @@
 # flake8: noqa: F811, F401
 import asyncio
+import logging
 import multiprocessing
 import time
 from dataclasses import replace
-import logging
 from secrets import token_bytes
 
 import pytest
@@ -12,22 +12,24 @@ from blspy import AugSchemeMPL, G2Element
 from src.consensus.blockchain import ReceiveBlockResult
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import InfusedChallengeChainSubSlot
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.block_tools import get_vdf_info_and_proof
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint64, uint8
-from src.util.wallet_tools import WalletTool
+from src.util.ints import uint8, uint64
 from src.util.recursive_replace import recursive_replace
-from tests.setup_nodes import test_constants, bt
-from tests.core.fixtures import empty_blockchain  # noqa: F401
-from tests.core.fixtures import default_1000_blocks  # noqa: F401
-from tests.core.fixtures import default_400_blocks  # noqa: F401
-from tests.core.fixtures import default_10000_blocks  # noqa: F401
+from src.util.wallet_tools import WalletTool
+from tests.core.fixtures import (
+    default_400_blocks,  # noqa: F401
+    default_1000_blocks,  # noqa: F401
+    default_10000_blocks,  # noqa: F401
+    empty_blockchain,  # noqa: F401
+)
+from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
@@ -172,8 +174,7 @@ class TestBlockHeaderValidation:
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
             log.info(
-                f"Added block {block.height} total iters {block.total_iters} "
-                f"new slot? {len(block.finished_sub_slots)}"
+                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
         assert empty_blockchain.get_peak().height == len(blocks) - 1
 
@@ -1712,5 +1713,5 @@ class TestPreValidation:
                 )
         end = time.time()
         log.info(f"Total time: {end - start} seconds")
-        log.info(f"Average pv: {sum(times_pv)/(len(blocks)/n_at_a_time)}")
-        log.info(f"Average rb: {sum(times_rb)/(len(blocks))}")
+        log.info(f"Average pv: {sum(times_pv) / (len(blocks) / n_at_a_time)}")
+        log.info(f"Average rb: {sum(times_rb) / (len(blocks))}")

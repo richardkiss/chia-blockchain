@@ -1,12 +1,12 @@
-from typing import Tuple, Optional, Dict
+from typing import Dict, Optional, Tuple
 
+from src.types.blockchain_format.program import Program
+from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import SpendBundle
+from src.util.condition_tools import conditions_dict_for_solution
 from src.wallet.cc_wallet import cc_utils
 from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
-from src.types.blockchain_format.program import Program
-from src.util.condition_tools import conditions_dict_for_solution
-from src.types.condition_opcodes import ConditionOpcode
 
 
 def trade_status_ui_string(status: TradeStatus):
@@ -25,7 +25,7 @@ def trade_status_ui_string(status: TradeStatus):
 
 
 def trade_record_to_dict(record: TradeRecord) -> Dict:
-    """ Convenience function to return only part of trade record we care about and show correct status to the ui"""
+    """Convenience function to return only part of trade record we care about and show correct status to the ui"""
     result = {}
     result["trade_id"] = record.trade_id.hex()
     result["sent"] = record.sent

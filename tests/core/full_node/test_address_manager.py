@@ -1,12 +1,14 @@
 import asyncio
-import pytest
-import time
 import math
-import aiosqlite
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.server.address_manager import ExtendedPeerInfo, AddressManager
-from src.server.address_manager_store import AddressManagerStore
+import time
 from pathlib import Path
+
+import aiosqlite
+import pytest
+
+from src.server.address_manager import AddressManager, ExtendedPeerInfo
+from src.server.address_manager_store import AddressManagerStore
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 
 
 @pytest.fixture(scope="module")
@@ -24,7 +26,7 @@ class AddressManagerTest(AddressManager):
 
     def make_deterministic(self):
         # Fix seed.
-        self.key = 2 ** 256 - 1
+        self.key = 2**256 - 1
 
     async def simulate_connection_fail(self, peer):
         await self.mark_good(peer.peer_info, True, 1)
@@ -318,8 +320,8 @@ class TestPeerManager:
         peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
-        key1 = 2 ** 256 - 1
-        key2 = 2 ** 128 - 1
+        key1 = 2**256 - 1
+        key2 = 2**128 - 1
         bucket1 = peer_info1.get_tried_bucket(key1)
         bucket2 = peer_info1.get_tried_bucket(key2)
         assert bucket1 != bucket2
@@ -363,8 +365,8 @@ class TestPeerManager:
         peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
-        key1 = 2 ** 256 - 1
-        key2 = 2 ** 128 - 1
+        key1 = 2**256 - 1
+        key2 = 2**128 - 1
         bucket1 = peer_info1.get_new_bucket(key1)
         bucket2 = peer_info1.get_new_bucket(key2)
         assert bucket1 != bucket2

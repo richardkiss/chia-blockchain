@@ -1,17 +1,17 @@
-from src.consensus.block_record import BlockRecord
-from src.full_node.full_node import FullNode
-from typing import Callable, List, Optional, Dict, Any
+from typing import Any, Callable, Dict, List, Optional
 
+from src.consensus.block_record import BlockRecord
+from src.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from src.full_node.full_node import FullNode
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_record import CoinRecord
 from src.types.full_block import FullBlock
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint64, uint32, uint128
+from src.util.ints import uint32, uint64, uint128
 from src.util.ws_message import create_payload
-from src.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 
 
 class FullNodeRpcApi:
@@ -229,7 +229,6 @@ class FullNodeRpcApi:
         return {"block_record": record}
 
     async def get_unfinished_block_headers(self, request: Dict) -> Optional[Dict]:
-
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
         if peak is None:
             return {"headers": []}
@@ -276,7 +275,7 @@ class FullNodeRpcApi:
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        eligible_plots_filter_multiplier = 2**self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters

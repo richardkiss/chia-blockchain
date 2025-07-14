@@ -5,23 +5,23 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Optional, Dict, Callable, List, Tuple, Any, Union, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
 from blspy import AugSchemeMPL
 
 import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from src.consensus.block_creation import unfinished_block_to_full_block
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
-    get_sub_slot_iters_and_difficulty,
     can_finish_sub_and_full_epoch,
+    get_sub_slot_iters_and_difficulty,
 )
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
-from src.consensus.pot_iterations import is_overflow_block, calculate_sp_iters
-from src.consensus.block_record import BlockRecord
+from src.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
@@ -30,27 +30,25 @@ from src.full_node.signage_point import SignagePoint
 from src.full_node.sync_store import SyncStore
 from src.full_node.weight_proof import WeightProofHandler
 from src.protocols import (
+    farmer_protocol,
     full_node_protocol,
     timelord_protocol,
     wallet_protocol,
-    farmer_protocol,
 )
-from src.protocols.full_node_protocol import RequestBlocks, RejectBlocks, RespondBlocks, RespondBlock
+from src.protocols.full_node_protocol import RejectBlocks, RequestBlocks, RespondBlock, RespondBlocks
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.server import ChiaServer
-from src.types.full_block import FullBlock
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.full_block import FullBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
-
 from src.util.errors import ConsensusError, Err
-from src.util.ints import uint32, uint128, uint8, uint64
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.path import mkdir, path_from_root
 
 
@@ -543,8 +541,7 @@ class FullNode:
             self.log.info(f"Total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")
             weight_proof_peer = random.choice(peers_with_peak)
             self.log.info(
-                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height"
-                f" {heaviest_peak_height}"
+                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height {heaviest_peak_height}"
             )
 
             if self.blockchain.get_peak() is not None and heaviest_peak_weight <= self.blockchain.get_peak().weight:
@@ -686,7 +683,11 @@ class FullNode:
                 return False, advanced_peak, fork_height
 
             assert pre_validation_results[i].required_iters is not None
-            (result, error, fork_height,) = await self.blockchain.receive_block(
+            (
+                result,
+                error,
+                fork_height,
+            ) = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
             )
             if result == ReceiveBlockResult.NEW_PEAK:
@@ -923,7 +924,7 @@ class FullNode:
 
             elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
                 self.log.info(
-                    f"Received orphan block of height {block.height} rh " f"{block.reward_chain_block.get_hash()}"
+                    f"Received orphan block of height {block.height} rh {block.reward_chain_block.get_hash()}"
                 )
             else:
                 # Should never reach here, all the cases are covered
@@ -1223,7 +1224,6 @@ class FullNode:
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Tuple[Optional[Message], bool]:
-
         fetched_ss = self.full_node_store.get_sub_slot(request.end_of_slot_bundle.challenge_chain.get_hash())
         if fetched_ss is not None:
             # Already have the sub-slot
@@ -1360,6 +1360,6 @@ class FullNode:
                 else:
                     self.mempool_manager.remove_seen(spend_name)
                     self.log.warning(
-                        f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
+                        f"Wasn't able to add transaction with id {spend_name}, status {status} error: {error}"
                     )
         return status, error

@@ -1,52 +1,46 @@
 import asyncio
 import dataclasses
 import logging
+import math
 import random
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import Optional, List, Tuple, Dict
-
-import math
+from typing import Dict, List, Optional, Tuple
 
 from src.consensus.block_header_validation import validate_finished_header_block
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.full_block_to_block_record import header_block_to_sub_block_record
-
 from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
     calculate_ip_iters,
-    is_overflow_block,
+    calculate_iterations_quality,
     calculate_sp_iters,
+    is_overflow_block,
 )
-from src.consensus.block_record import BlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.slots import RewardChainSubSlot, ChallengeChainSubSlot
+from src.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo
-
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
-
 from src.types.weight_proof import (
-    WeightProof,
-    SubEpochData,
     SubEpochChallengeSegment,
+    SubEpochData,
     SubSlotData,
+    WeightProof,
 )
 from src.util.block_cache import BlockCache
-
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64, uint8, uint128
-from src.util.streamable import recurse_jsonify, dataclass_from_dict
+from src.util.ints import uint8, uint32, uint64, uint128
+from src.util.streamable import dataclass_from_dict, recurse_jsonify
 
 log = logging.getLogger(__name__)
 
 
 class WeightProofHandler:
-
     LAMBDA_L = 100
     C = 0.5
     MAX_SAMPLES = 100
@@ -63,7 +57,6 @@ class WeightProofHandler:
         self.lock = asyncio.Lock()
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
-
         tip_rec = self.blockchain.try_block_record(tip)
         if tip_rec is None:
             log.error("unknown tip")
@@ -406,7 +399,14 @@ class WeightProofHandler:
             icc_ip_info = curr.reward_chain_block.infused_challenge_chain_ip_vdf
         if curr.challenge_chain_sp_proof is not None:
             assert curr.reward_chain_block.challenge_chain_sp_vdf
-            (_, _, _, _, cc_vdf_iters, _,) = get_signage_point_vdf_info(
+            (
+                _,
+                _,
+                _,
+                _,
+                cc_vdf_iters,
+                _,
+            ) = get_signage_point_vdf_info(
                 self.constants,
                 curr.finished_sub_slots,
                 block_record.overflow,
@@ -522,7 +522,7 @@ class WeightProofHandler:
         queries = -self.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
         for i in range(int(queries) + 1):
             u = rng.random()
-            q = 1 - delta ** u
+            q = 1 - delta**u
             # todo check division and type conversions
             weight = q * float(total_weight)
             weight_to_check.append(uint128(weight))
@@ -553,7 +553,14 @@ async def _challenge_block_vdfs(
     if not header_block.first_in_sub_slot and header_block.height > 0:
         prev_header_block = header_blocks[header_block.prev_header_hash]
         cc_slot_end_vdf_info = prev_header_block.reward_chain_block.challenge_chain_ip_vdf
-    (_, _, _, _, cc_vdf_iters, _,) = get_signage_point_vdf_info(
+    (
+        _,
+        _,
+        _,
+        _,
+        cc_vdf_iters,
+        _,
+    ) = get_signage_point_vdf_info(
         constants,
         header_block.finished_sub_slots,
         block_rec.overflow,
@@ -616,7 +623,6 @@ def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
     weight_proof: WeightProof,
 ) -> Optional[List[SubEpochSummary]]:
-
     last_ses_hash, last_ses_sub_height = _get_last_ses_hash(constants, weight_proof.recent_chain_data)
     if last_ses_hash is None:
         log.warning("could not find last ses block")
@@ -1116,7 +1122,6 @@ def __get_rc_sub_slot(
     summaries: List[SubEpochSummary],
     curr_ssi: uint64,
 ) -> RewardChainSubSlot:
-
     ses = summaries[uint32(segment.sub_epoch_n - 1)]
     # find first challenge in sub epoch
     first_idx = None

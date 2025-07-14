@@ -1,28 +1,28 @@
 import asyncio
-import time
 import math
+import time
+import traceback
 from pathlib import Path
+from random import Random
+from secrets import randbits
+from typing import Dict, Optional
 
 import aiosqlite
-import traceback
-from random import Random
-import src.server.ws_connection as ws
-from src.protocols.protocol_message_types import ProtocolMessageTypes
 
+import src.server.ws_connection as ws
+from src.protocols import (
+    full_node_protocol,
+    introducer_protocol,
+)
+from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.server.address_manager import AddressManager, ExtendedPeerInfo
+from src.server.address_manager_store import AddressManagerStore
+from src.server.outbound_message import NodeType, make_msg
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.util.path import path_from_root, mkdir
-from src.server.outbound_message import NodeType, make_msg
-from src.server.address_manager import ExtendedPeerInfo, AddressManager
-from src.server.address_manager_store import AddressManagerStore
-from src.protocols import (
-    introducer_protocol,
-    full_node_protocol,
-)
-from secrets import randbits
 from src.util.hash import std_hash
-from typing import Dict, Optional
 from src.util.ints import uint64
+from src.util.path import mkdir, path_from_root
 
 
 class FullNodeDiscovery:
@@ -428,7 +428,6 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def request_peers(self, peer_info: PeerInfo):
         try:
-
             # Prevent a fingerprint attack: do not send peers to inbound connections.
             # This asymmetric behavior for inbound and outbound connections was introduced
             # to prevent a fingerprinting attack: an attacker can send specific fake addresses

@@ -1,12 +1,13 @@
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, List, Optional, Tuple
+
 import aiosqlite
 
 from src.consensus.block_record import BlockRecord
-from src.types.header_block import HeaderBlock
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.header_block import HeaderBlock
 from src.util.ints import uint32, uint64
 from src.wallet.block_record import HeaderBlockRecord
-from src.types.blockchain_format.sized_bytes import bytes32
 
 
 class WalletBlockStore:
@@ -110,7 +111,7 @@ class WalletBlockStore:
             return []
 
         heights_db = tuple(heights)
-        formatted_str = f'SELECT block from header_blocks WHERE height in ({"?," * (len(heights_db) - 1)}?)'
+        formatted_str = f"SELECT block from header_blocks WHERE height in ({'?,' * (len(heights_db) - 1)}?)"
         cursor = await self.db.execute(formatted_str, heights_db)
         rows = await cursor.fetchall()
         await cursor.close()
@@ -201,7 +202,6 @@ class WalletBlockStore:
         start: int,
         stop: int,
     ) -> Dict[bytes32, HeaderBlock]:
-
         formatted_str = f"SELECT header_hash, block from header_blocks WHERE height >= {start} and height <= {stop}"
 
         cursor = await self.db.execute(formatted_str)

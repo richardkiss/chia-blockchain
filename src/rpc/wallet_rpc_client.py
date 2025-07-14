@@ -1,10 +1,11 @@
-from typing import Dict, List
 from pathlib import Path
+from typing import Dict, List
+
 from src.rpc.rpc_client import RpcClient
-from src.wallet.transaction_record import TransactionRecord
-from src.util.ints import uint64, uint32
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash
+from src.util.ints import uint32, uint64
+from src.wallet.transaction_record import TransactionRecord
 
 
 class WalletRpcClient(RpcClient):
@@ -115,7 +116,6 @@ class WalletRpcClient(RpcClient):
     async def send_transaction(
         self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
-
         res = await self.fetch(
             "send_transaction",
             {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},

@@ -5,24 +5,26 @@ import os
 import signal
 import subprocess
 import sys
-import traceback
-from pathlib import Path
-from enum import Enum
-import uuid
 import time
-from typing import Dict, Any, List, Tuple, Optional, TextIO, cast
+import traceback
+import uuid
 from concurrent.futures import ThreadPoolExecutor
-from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketServerProtocol
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+
+from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
+
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server
-from src.util.setproctitle import setproctitle
-from src.util.ws_message import format_response, create_payload
-from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
+from src.util.json_util import dict_to_json_str
 from src.util.logging import initialize_logging
 from src.util.path import mkdir
 from src.util.service_groups import validate_service
+from src.util.setproctitle import setproctitle
+from src.util.ws_message import create_payload, format_response
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -329,7 +331,7 @@ class WebSocketServer:
 
         words = ["Renamed final file"]
         file_path = config["out_file"]
-        fp = open(file_path, "r")
+        fp = open(file_path)
         while True:
             new = await loop.run_in_executor(io_pool_exc, fp.readline)
 
@@ -449,7 +451,7 @@ class WebSocketServer:
             config["state"] = PlotState.FINISHED
             self.state_changed(service_plotter, "state")
 
-        except (subprocess.SubprocessError, IOError):
+        except (OSError, subprocess.SubprocessError):
             log.exception(f"problem starting {service_name}")
             error = Exception("Start plotting failed")
             config["state"] = PlotState.ERROR
@@ -560,7 +562,7 @@ class WebSocketServer:
                 process, pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = process
                 success = True
-            except (subprocess.SubprocessError, IOError):
+            except (OSError, subprocess.SubprocessError):
                 log.exception(f"problem starting {service_command}")
                 error = "start failed"
 
@@ -804,7 +806,7 @@ def create_server_for_daemon(root_path: Path):
             process, pid_path = launch_service(root_path, service_name)
             services[service_name] = process
             r = f"{service_name} started"
-        except (subprocess.SubprocessError, IOError):
+        except (OSError, subprocess.SubprocessError):
             log.exception(f"problem starting {service_name}")
             r = f"{service_name} start failed"
 
@@ -860,7 +862,7 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
             fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
             f = open(fd, "w")
         f.write(text)
-    except IOError:
+    except OSError:
         return None
     return f
 

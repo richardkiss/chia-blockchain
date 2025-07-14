@@ -1,13 +1,14 @@
 import pytest
-from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.setup_nodes import setup_full_system, test_constants, self_hostname
-from src.util.ints import uint16
-from tests.time_out_assert import time_out_assert
+
 from src.types.peer_info import PeerInfo
+from src.util.ints import uint16
+from tests.core.full_node.test_full_sync import node_height_at_least
+from tests.setup_nodes import self_hostname, setup_full_system, test_constants
+from tests.time_out_assert import time_out_assert
 
 test_constants_modified = test_constants.replace(
     **{
-        "DIFFICULTY_STARTING": 2 ** 8,
+        "DIFFICULTY_STARTING": 2**8,
         "DISCRIMINANT_SIZE_BITS": 1024,
         "SUB_EPOCH_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
@@ -15,7 +16,7 @@ test_constants_modified = test_constants.replace(
         "MAX_SUB_SLOT_BLOCKS": 50,
         "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
         "EPOCH_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2 ** 20,
+        "SUB_SLOT_ITERS_STARTING": 2**20,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
     }
 )

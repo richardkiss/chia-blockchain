@@ -1,9 +1,9 @@
+import logging
 import time
 import traceback
 from pathlib import Path
 from secrets import token_bytes
-from typing import Dict, Optional, Tuple, List, Any
-import logging
+from typing import Any, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL
 
@@ -15,6 +15,12 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_utils
+from src.wallet.cc_wallet.cc_utils import (
+    CC_MOD,
+    SpendableCC,
+    spend_bundle_for_spendable_ccs,
+    uncurry_cc,
+)
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.puzzles.genesis_by_coin_id_with_0 import genesis_coin_id_for_genesis_coin_checker
 from src.wallet.trade_record import TradeRecord
@@ -23,19 +29,12 @@ from src.wallet.trading.trade_store import TradeStore
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.trade_utils import (
     get_discrepancies_for_spend_bundle,
-    get_output_discrepancy_for_puzzle_and_solution,
     get_output_amount_for_puzzle_and_solution,
-)
-from src.wallet.cc_wallet.cc_utils import (
-    SpendableCC,
-    uncurry_cc,
-    spend_bundle_for_spendable_ccs,
-    CC_MOD,
+    get_output_discrepancy_for_puzzle_and_solution,
 )
 from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
-
 from src.wallet.wallet_coin_record import WalletCoinRecord
 
 # from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
@@ -157,7 +156,7 @@ class TradeManager:
                     self.log.warning(f"Trade with id: {trade.trade_id} failed at height: {height}")
 
     async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
-        """ Returns a dictionary of confirmed coins that are locked by a trade. """
+        """Returns a dictionary of confirmed coins that are locked by a trade."""
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
         pending_confirm = await self.get_offers_with_status(TradeStatus.PENDING_CONFIRM)
@@ -189,7 +188,7 @@ class TradeManager:
         return record
 
     async def get_locked_coins_in_spend_bundle(self, bundle: SpendBundle) -> Dict[bytes32, WalletCoinRecord]:
-        """ Returns a list of coin records that are used in this SpendBundle"""
+        """Returns a list of coin records that are used in this SpendBundle"""
         result = {}
         removals = bundle.removals()
         for coin in removals:
@@ -203,7 +202,7 @@ class TradeManager:
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELED)
 
     async def cancel_pending_offer_safely(self, trade_id: bytes32):
-        """ This will create a transaction that includes coins that were offered"""
+        """This will create a transaction that includes coins that were offered"""
         self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
         trade = await self.trade_store.get_trade_record(trade_id)
         if trade is None:

@@ -1,9 +1,11 @@
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
+
 import aiosqlite
-from src.types.full_block import FullBlock
+
 from src.types.blockchain_format.coin import Coin
-from src.types.coin_record import CoinRecord
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_record import CoinRecord
+from src.types.full_block import FullBlock
 from src.util.ints import uint32, uint64
 
 
@@ -24,18 +26,16 @@ class CoinStore:
         self.cache_size = cache_size
         self.coin_record_db = connection
         await self.coin_record_db.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS coin_record("
-                "coin_name text PRIMARY KEY,"
-                " confirmed_index bigint,"
-                " spent_index bigint,"
-                " spent int,"
-                " coinbase int,"
-                " puzzle_hash text,"
-                " coin_parent text,"
-                " amount blob,"
-                " timestamp bigint)"
-            )
+            "CREATE TABLE IF NOT EXISTS coin_record("
+            "coin_name text PRIMARY KEY,"
+            " confirmed_index bigint,"
+            " spent_index bigint,"
+            " spent int,"
+            " coinbase int,"
+            " puzzle_hash text,"
+            " coin_parent text,"
+            " amount blob,"
+            " timestamp bigint)"
         )
 
         # Useful for reorg lookups
@@ -135,9 +135,8 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hash: bytes32,
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
-
         coins = set()
         cursor = await self.coin_record_db.execute(
             f"SELECT * from coin_record WHERE puzzle_hash=? AND confirmed_index>=? AND confirmed_index<? "

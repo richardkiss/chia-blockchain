@@ -1,9 +1,8 @@
+import asyncio
 import logging
 import time
-import asyncio
 import traceback
-
-from typing import Any, Callable, Optional, List, Dict
+from typing import Any, Callable, Dict, List, Optional
 
 from aiohttp import WSMessage, WSMsgType
 
@@ -11,10 +10,10 @@ from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.shared_protocol import Handshake
 from src.server.outbound_message import Message, NodeType, make_msg
-from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint16, uint8
+from src.types.peer_info import PeerInfo
 from src.util.errors import Err, ProtocolError
+from src.util.ints import uint8, uint16
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from src.util.network import class_for_type
@@ -221,7 +220,7 @@ class WSChiaConnection:
             self.log.error(f"Exception Stack: {error_stack}")
 
     async def send_message(self, message: Message):
-        """ Send message sends a message with no tracking / callback. """
+        """Send message sends a message with no tracking / callback."""
         if self.closed:
             return
         await self.outgoing_queue.put(message)
@@ -260,7 +259,7 @@ class WSChiaConnection:
         return invoke
 
     async def create_request(self, message_no_id: Message, timeout: int) -> Optional[Message]:
-        """ Sends a message and waits for a response. """
+        """Sends a message and waits for a response."""
         if self.closed:
             return None
 
@@ -269,7 +268,7 @@ class WSChiaConnection:
 
         # The request nonce is an integer between 0 and 2**16 - 1, which is used to match requests to responses
         request_id = self.request_nonce
-        self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(0)
+        self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(0)
 
         message = Message(message_no_id.type, message_no_id.data, request_id)
 
@@ -333,9 +332,7 @@ class WSChiaConnection:
             connection_type_str = ""
         if message.type == WSMsgType.CLOSING:
             self.log.debug(
-                f"Closing connection to {connection_type_str} {self.peer_host}:"
-                f"{self.peer_server_port}/"
-                f"{self.peer_port}"
+                f"Closing connection to {connection_type_str} {self.peer_host}:{self.peer_server_port}/{self.peer_port}"
             )
             asyncio.create_task(self.close())
             await asyncio.sleep(3)

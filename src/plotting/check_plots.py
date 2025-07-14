@@ -1,13 +1,15 @@
-from typing import List, Dict
-from pathlib import Path
 import logging
-from chiapos import Verifier
 from collections import Counter
+from pathlib import Path
+from typing import Dict, List
+
 from blspy import G1Element
-from src.util.keychain import Keychain
+from chiapos import Verifier
+
+from src.plotting.plot_tools import find_duplicate_plot_IDs, get_plot_filenames, load_plots
 from src.util.config import load_config
-from src.plotting.plot_tools import load_plots, get_plot_filenames, find_duplicate_plot_IDs
 from src.util.hash import std_hash
+from src.util.keychain import Keychain
 from src.wallet.derive_keys import master_sk_to_farmer_sk
 
 log = logging.getLogger(__name__)
@@ -99,18 +101,18 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                         return
                     log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
         if total_proofs > 0:
-            log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+            log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
         else:
             total_bad_plots += 1
-            log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+            log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}")
     log.info("")
     log.info("")
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
-    for (k, count) in sorted(dict(total_good_plots).items()):
+    for k, count in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
     grand_total_bad = total_bad_plots + len(failed_to_open_filenames)
     if grand_total_bad > 0:

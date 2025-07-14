@@ -2,17 +2,17 @@ import pytest
 from blspy import AugSchemeMPL
 
 from src.consensus.pot_iterations import is_overflow_block
-from src.rpc.full_node_rpc_api import FullNodeRpcApi
-from src.rpc.rpc_server import start_rpc_server
 from src.protocols import full_node_protocol
+from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
+from src.rpc.rpc_server import start_rpc_server
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
 from src.util.ints import uint16
 from src.util.wallet_tools import WalletTool
-from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -64,7 +64,7 @@ class TestRpc:
             blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             assert len(await client.get_unfinished_block_headers()) == 0
-            assert len((await client.get_block_records(0, 100))) == 0
+            assert len(await client.get_block_records(0, 100)) == 0
             for block in blocks:
                 if is_overflow_block(test_constants, block.reward_chain_block.signage_point_index):
                     finished_ss = block.finished_sub_slots[:-1]
@@ -96,7 +96,7 @@ class TestRpc:
 
             assert (await client.get_block_record_by_height(2)).header_hash == blocks[2].header_hash
 
-            assert len((await client.get_block_records(0, 100))) == num_blocks * 2
+            assert len(await client.get_block_records(0, 100)) == num_blocks * 2
 
             assert (await client.get_block_record_by_height(100)) is None
 

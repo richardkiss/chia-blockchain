@@ -1,18 +1,18 @@
-from typing import List, Dict, Optional, Tuple, Set, Union
-from pathlib import Path
-from blspy import PrivateKey, G1Element
-from chiapos import DiskProver
-from dataclasses import dataclass
-import time
 import logging
+import time
 import traceback
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple, Union
 
-from src.consensus.pos_quality import _expected_plot_size, UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from blspy import G1Element, PrivateKey
+from chiapos import DiskProver
+
+from src.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
-
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ def load_plots(
     config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
     no_key_filenames: Set[Path] = set()
-    log.info(f'Searching directories {config_file["plot_directories"]}')
+    log.info(f"Searching directories {config_file['plot_directories']}")
 
     plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config_file)
     all_filenames: List[Path] = []
@@ -192,7 +192,7 @@ def load_plots(
                 if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
                     log.warning(
                         f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
-                        f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+                        f" at least: {expected_size / (1024**3)} GiB. We assume the file is being copied."
                     )
                     continue
 
@@ -264,8 +264,8 @@ def load_plots(
                 log.info(f"Memo: {plot_memo_str}")
 
     log.info(
-        f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
-        f" {time.time()-start_time} seconds"
+        f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024**4)} TiB, in"
+        f" {time.time() - start_time} seconds"
     )
     return changed, new_provers, failed_to_open_filenames, no_key_filenames
 

@@ -1,7 +1,7 @@
 from secrets import token_bytes
-from src.types.blockchain_format.proof_of_space import ProofOfSpace  # pylint: disable=E0401
 
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.types.blockchain_format.proof_of_space import ProofOfSpace  # pylint: disable=E0401
 
 
 class TestProofOfSpace:
@@ -11,7 +11,7 @@ class TestProofOfSpace:
         """
         num_trials = 100000
         success_count = 0
-        target_filter = 2 ** DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER
+        target_filter = 2**DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER
         for _ in range(num_trials):
             challenge_hash = token_bytes(32)
             plot_id = token_bytes(32)

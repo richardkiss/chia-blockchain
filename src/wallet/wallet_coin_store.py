@@ -1,6 +1,8 @@
 import asyncio
-from typing import Dict, Optional, List, Set
+from typing import Dict, List, Optional, Set
+
 import aiosqlite
+
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
@@ -24,19 +26,17 @@ class WalletCoinStore:
 
         self.db_connection = connection
         await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS coin_record("
-                "coin_name text PRIMARY KEY,"
-                " confirmed_height bigint,"
-                " spent_height bigint,"
-                " spent int,"
-                " coinbase int,"
-                " puzzle_hash text,"
-                " coin_parent text,"
-                " amount blob,"
-                " wallet_type int,"
-                " wallet_id int)"
-            )
+            "CREATE TABLE IF NOT EXISTS coin_record("
+            "coin_name text PRIMARY KEY,"
+            " confirmed_height bigint,"
+            " spent_height bigint,"
+            " spent int,"
+            " coinbase int,"
+            " puzzle_hash text,"
+            " coin_parent text,"
+            " amount blob,"
+            " wallet_type int,"
+            " wallet_id int)"
         )
 
         # Useful for reorg lookups
@@ -117,7 +117,7 @@ class WalletCoinStore:
         await self.add_coin_record(spent)
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
-        """ Returns CoinRecord with specified coin id. """
+        """Returns CoinRecord with specified coin id."""
         if coin_name in self.coin_record_cache:
             return self.coin_record_cache[coin_name]
         cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
@@ -129,7 +129,7 @@ class WalletCoinStore:
         return None
 
     async def get_first_coin_height(self) -> Optional[uint32]:
-        """ Returns height of first confirmed coin"""
+        """Returns height of first confirmed coin"""
         cursor = await self.db_connection.execute("SELECT MIN(confirmed_height) FROM coin_record;")
         row = await cursor.fetchone()
         await cursor.close()
@@ -162,7 +162,7 @@ class WalletCoinStore:
             return all_unspent
 
     async def get_unspent_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
-        """ Returns set of CoinRecords that have not been spent yet for a wallet. """
+        """Returns set of CoinRecords that have not been spent yet for a wallet."""
         async with self.wallet_cache_lock:
             if wallet_id in self.coin_wallet_record_cache:
                 wallet_coins: Dict[bytes32, WalletCoinRecord] = self.coin_wallet_record_cache[wallet_id]
@@ -187,7 +187,7 @@ class WalletCoinStore:
             return coin_set
 
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
-        """ Returns set of all CoinRecords."""
+        """Returns set of all CoinRecords."""
         coins = set()
 
         cursor = await self.db_connection.execute("SELECT * from coin_record")

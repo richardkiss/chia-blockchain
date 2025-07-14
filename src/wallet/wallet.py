@@ -1,30 +1,30 @@
 import logging
 import time
-from typing import Dict, List, Set, Any, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
 
-from src.types.blockchain_format.coin import Coin
-from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
+from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
-from src.types.coin_solution import CoinSolution
+from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
-from src.util.ints import uint8, uint64, uint32, uint128
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    puzzle_for_pk,
     DEFAULT_HIDDEN_PUZZLE_HASH,
-    solution_for_conditions,
     calculate_synthetic_secret_key,
+    puzzle_for_pk,
+    solution_for_conditions,
 )
 from src.wallet.puzzles.puzzle_utils import (
+    make_assert_announcement,
     make_assert_my_coin_id_condition,
     make_assert_seconds_now_exceeds_condition,
+    make_create_announcement,
     make_create_coin_condition,
     make_reserve_fee_condition,
-    make_create_announcement,
-    make_assert_announcement,
 )
 from src.wallet.secret_key_store import SecretKeyStore
 from src.wallet.sign_coin_solutions import sign_coin_solutions
@@ -200,7 +200,7 @@ class Wallet:
         return solution_for_conditions(condition_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
-        """ Returns a set of coins that can be used for generating a new transaction. """
+        """Returns a set of coins that can be used for generating a new transaction."""
         async with self.wallet_state_manager.lock:
             if exclude is None:
                 exclude = []
@@ -326,7 +326,7 @@ class Wallet:
         primaries: Optional[List[Dict[str, bytes32]]] = None,
         ignore_max_send_amount: bool = False,
     ) -> TransactionRecord:
-        """ Use this to generate transaction. """
+        """Use this to generate transaction."""
 
         transaction = await self.generate_unsigned_transaction(
             amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount
@@ -362,7 +362,7 @@ class Wallet:
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
-        """ Use this API to send transactions. """
+        """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)
 
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens

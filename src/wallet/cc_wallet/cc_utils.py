@@ -1,24 +1,22 @@
 import dataclasses
-
 from typing import List, Optional, Tuple
 
-from blspy import G2Element, AugSchemeMPL
+from blspy import AugSchemeMPL, G2Element
 
 from src.types.blockchain_format.coin import Coin
-from src.types.condition_opcodes import ConditionOpcode
 from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import CoinSolution, SpendBundle
 from src.util.condition_tools import conditions_dict_for_solution
 from src.util.ints import uint64
 from src.wallet.puzzles.cc_loader import CC_MOD, LOCK_INNER_PUZZLE
 from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
-    lineage_proof_for_genesis,
-    lineage_proof_for_coin,
-    lineage_proof_for_zero,
     genesis_coin_id_for_genesis_coin_checker,
+    lineage_proof_for_coin,
+    lineage_proof_for_genesis,
+    lineage_proof_for_zero,
 )
-
 
 NULL_SIGNATURE = G2Element.generator() * 0
 
@@ -211,7 +209,6 @@ def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
 
 
 def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_puzzle_f) -> List[SpendableCC]:
-
     """
     Given a `CoinSolution`, extract out a list of `SpendableCC` objects.
 

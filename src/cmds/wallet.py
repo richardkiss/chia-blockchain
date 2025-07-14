@@ -1,22 +1,22 @@
-import click
+import asyncio
 import sys
 import time
 from datetime import datetime
-from typing import Tuple, Optional, Callable, List
+from decimal import Decimal
+from typing import Callable, List, Optional, Tuple
 
 import aiohttp
-import asyncio
+import click
 
+from src.cmds.units import units
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.util.bech32m import encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.ints import uint64, uint16
+from src.util.ints import uint16, uint64
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
-from src.cmds.units import units
-from decimal import Decimal
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool) -> None:
@@ -98,27 +98,27 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         typ = WalletType(int(summary["type"])).name
         if typ != "STANDARD_WALLET":
             print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-            print(f"   -Confirmed: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}")
-            print(f"   -Pending change: {balances['pending_change']/units['colouredcoin']}")
+            print(f"   -Confirmed: {balances['confirmed_wallet_balance'] / units['colouredcoin']}")
+            print(f"   -Unconfirmed: {balances['unconfirmed_wallet_balance'] / units['colouredcoin']}")
+            print(f"   -Spendable: {balances['spendable_balance'] / units['colouredcoin']}")
+            print(f"   -Pending change: {balances['pending_change'] / units['colouredcoin']}")
         else:
             print(f"Wallet ID {wallet_id} type {typ}")
             print(
                 f"   -Confirmed: {balances['confirmed_wallet_balance']} mojo "
-                f"({balances['confirmed_wallet_balance']/units['chia']} TXCH)"
+                f"({balances['confirmed_wallet_balance'] / units['chia']} TXCH)"
             )
             print(
                 f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']} mojo "
-                f"({balances['unconfirmed_wallet_balance']/units['chia']} TXCH)"
+                f"({balances['unconfirmed_wallet_balance'] / units['chia']} TXCH)"
             )
             print(
                 f"   -Spendable: {balances['spendable_balance']} mojo "
-                f"({balances['spendable_balance']/units['chia']} TXCH)"
+                f"({balances['spendable_balance'] / units['chia']} TXCH)"
             )
             print(
                 f"   -Pending change: {balances['pending_change']} mojo "
-                f"({balances['pending_change']/units['chia']} TXCH)"
+                f"({balances['pending_change'] / units['chia']} TXCH)"
             )
 
 
@@ -138,7 +138,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     else:
         print("Choose wallet key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            print(f"{i + 1}) {fp}")
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")

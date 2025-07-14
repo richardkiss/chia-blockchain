@@ -1,45 +1,49 @@
 import asyncio
 import json
+import logging
+import socket
 import time
 import traceback
 from asyncio import Task
-from typing import Dict, Optional, Tuple, List, Callable, Union, Set
 from pathlib import Path
-import socket
-import logging
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+
 from blspy import PrivateKey
 
-from src.consensus.multiprocess_validation import PreValidationResult
 from src.consensus.block_record import BlockRecord
+from src.consensus.constants import ConsensusConstants
+from src.consensus.multiprocess_validation import PreValidationResult
+from src.protocols import wallet_protocol
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.wallet_protocol import (
-    RespondBlockHeader,
-    RequestAdditions,
-    RespondAdditions,
-    RespondRemovals,
-    RejectRemovalsRequest,
     RejectAdditionsRequest,
+    RejectRemovalsRequest,
+    RequestAdditions,
     RequestHeaderBlocks,
+    RespondAdditions,
+    RespondBlockHeader,
     RespondHeaderBlocks,
+    RespondRemovals,
 )
+from src.server.node_discovery import WalletPeers
+from src.server.outbound_message import Message, NodeType, make_msg
+from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
-from src.types.blockchain_format.coin import hash_coin_list, Coin
+from src.types.blockchain_format.coin import Coin, hash_coin_list
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.protocols import wallet_protocol
-from src.consensus.constants import ConsensusConstants
-from src.server.server import ChiaServer
-from src.server.outbound_message import make_msg, NodeType, Message
-from src.server.node_discovery import WalletPeers
-from src.util.errors import ValidationError, Err
+from src.util.errors import Err, ValidationError
 from src.util.ints import uint32, uint128
-from src.types.blockchain_format.sized_bytes import bytes32
+from src.util.keychain import Keychain
 from src.util.merkle_set import (
+    MerkleSet,
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,
-    MerkleSet,
 )
+from src.util.path import mkdir, path_from_root
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.settings.settings_objects import BackupInitialized
@@ -49,9 +53,6 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_blockchain import ReceiveBlockResult
 from src.wallet.wallet_state_manager import WalletStateManager
-from src.types.header_block import HeaderBlock
-from src.util.path import path_from_root, mkdir
-from src.util.keychain import Keychain
 
 
 class WalletNode:
@@ -358,7 +359,10 @@ class WalletNode:
             for block in header_blocks:
                 if block.is_transaction_block:
                     # Find additions and removals
-                    (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
+                    (
+                        additions,
+                        removals,
+                    ) = await self.wallet_state_manager.get_filter_additions_removals(
                         block, block.transactions_filter, None
                     )
 
@@ -466,9 +470,9 @@ class WalletNode:
         current_peak: Optional[BlockRecord] = self.wallet_state_manager.blockchain.get_peak()
         if current_peak is None:
             return
-        potential_peaks: List[
-            Tuple[bytes32, HeaderBlock]
-        ] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
+        potential_peaks: List[Tuple[bytes32, HeaderBlock]] = (
+            self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
+        )
         for _, block in potential_peaks:
             if current_peak.weight < block.weight:
                 await asyncio.sleep(5)
@@ -508,9 +512,9 @@ class WalletNode:
         highest_weight: uint128 = uint128(0)
         peak_height: uint32 = uint32(0)
         peak: Optional[HeaderBlock] = None
-        potential_peaks: List[
-            Tuple[bytes32, HeaderBlock]
-        ] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
+        potential_peaks: List[Tuple[bytes32, HeaderBlock]] = (
+            self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
+        )
 
         self.log.info(f"Have collected {len(potential_peaks)} potential peaks")
 
@@ -614,7 +618,10 @@ class WalletNode:
             fork_point_with_old_peak = None if advanced_peak else fork_point_with_peak
             if header_block.is_transaction_block:
                 # Find additions and removals
-                (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
+                (
+                    additions,
+                    removals,
+                ) = await self.wallet_state_manager.get_filter_additions_removals(
                     header_block, header_block.transactions_filter, fork_point_with_old_peak
                 )
 
@@ -633,12 +640,20 @@ class WalletNode:
                 header_block_record = HeaderBlockRecord(header_block, [], [])
             start_t = time.time()
             if trusted:
-                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
+                (
+                    result,
+                    error,
+                    fork_h,
+                ) = await self.wallet_state_manager.blockchain.receive_block(
                     header_block_record, None, trusted, fork_point_with_old_peak
                 )
             else:
                 assert pre_validation_results is not None
-                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
+                (
+                    result,
+                    error,
+                    fork_h,
+                ) = await self.wallet_state_manager.blockchain.receive_block(
                     header_block_record, pre_validation_results[i], trusted, fork_point_with_old_peak
                 )
             self.log.debug(

@@ -1,10 +1,12 @@
-from typing import Dict, Optional, List, Set, Any
+from typing import Any, Dict, List, Optional, Set
+
 import aiosqlite
+
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint32, uint8
-from src.wallet.transaction_record import TransactionRecord
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
+from src.util.ints import uint8, uint32
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.transaction_type import TransactionType
 
 
@@ -26,21 +28,19 @@ class WalletTransactionStore:
 
         self.db_connection = connection
         await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS transaction_record("
-                " transaction_record blob,"
-                " bundle_id text PRIMARY KEY,"
-                " confirmed_at_height bigint,"
-                " created_at_time bigint,"
-                " to_puzzle_hash text,"
-                " amount blob,"
-                " fee_amount blob,"
-                " confirmed int,"
-                " sent int,"
-                " wallet_id bigint,"
-                " trade_id text,"
-                " type int)"
-            )
+            "CREATE TABLE IF NOT EXISTS transaction_record("
+            " transaction_record blob,"
+            " bundle_id text PRIMARY KEY,"
+            " confirmed_at_height bigint,"
+            " created_at_time bigint,"
+            " to_puzzle_hash text,"
+            " amount blob,"
+            " fee_amount blob,"
+            " confirmed int,"
+            " sent int,"
+            " wallet_id bigint,"
+            " trade_id text,"
+            " type int)"
         )
 
         # Useful for reorg lookups
@@ -146,7 +146,7 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx)
 
     async def unconfirmed_with_removal_coin(self, removal_id: bytes32) -> List[TransactionRecord]:
-        """ Returns a record containing removed coin with id: removal_id"""
+        """Returns a record containing removed coin with id: removal_id"""
         result = []
         all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
         for record in all_unconfirmed:
@@ -157,7 +157,7 @@ class WalletTransactionStore:
         return result
 
     async def tx_with_addition_coin(self, removal_id: bytes32, wallet_id: int) -> List[TransactionRecord]:
-        """ Returns a record containing removed coin with id: removal_id"""
+        """Returns a record containing removed coin with id: removal_id"""
         result = []
         all_records = await self.get_all_transactions(wallet_id, TransactionType.OUTGOING_TX.value)
 

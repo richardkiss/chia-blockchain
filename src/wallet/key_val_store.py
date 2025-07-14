@@ -1,4 +1,5 @@
 from typing import Any
+
 import aiosqlite
 
 from src.util.byte_types import hexstr_to_bytes
@@ -18,9 +19,7 @@ class KeyValStore:
 
         self.db_connection = connection
 
-        await self.db_connection.execute(
-            ("CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value text)")
-        )
+        await self.db_connection.execute("CREATE TABLE IF NOT EXISTS key_val_store( key text PRIMARY KEY, value text)")
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on key_val_store(key)")
 

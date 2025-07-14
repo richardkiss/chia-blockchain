@@ -1,18 +1,16 @@
 import unicodedata
-
+from hashlib import pbkdf2_hmac
 from secrets import token_bytes
 from sys import platform
-from typing import List, Tuple, Optional
-from hashlib import pbkdf2_hmac
+from typing import List, Optional, Tuple
 
 import keyring as keyring_main
 import pkg_resources
-
 from bitstring import BitArray
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
-from src.util.hash import std_hash
 
+from src.util.hash import std_hash
 
 MAX_KEYS = 100
 
@@ -147,7 +145,7 @@ class Keychain:
         str_bytes = bytes.fromhex(read_str)
         return (
             G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
-            str_bytes[G1Element.SIZE :],  # flake8: noqa
+            str_bytes[G1Element.SIZE :],  # noqa: E203
         )
 
     def _get_private_key_user(self, index: int):

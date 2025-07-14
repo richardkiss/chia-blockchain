@@ -1,12 +1,14 @@
 import asyncio
-from blspy import G1Element
-from typing import Set, Tuple, Optional, List
-import aiosqlite
 import logging
+from typing import List, Optional, Set, Tuple
+
+import aiosqlite
+from blspy import G1Element
+
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32
-from src.wallet.util.wallet_types import WalletType
 from src.wallet.derivation_record import DerivationRecord
+from src.wallet.util.wallet_types import WalletType
 
 log = logging.getLogger(__name__)
 
@@ -30,15 +32,13 @@ class WalletPuzzleStore:
         self.db_connection = connection
 
         await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS derivation_paths("
-                "derivation_index int,"
-                " pubkey text,"
-                " puzzle_hash text PRIMARY_KEY,"
-                " wallet_type int,"
-                " wallet_id int,"
-                " used tinyint)"
-            )
+            "CREATE TABLE IF NOT EXISTS derivation_paths("
+            "derivation_index int,"
+            " pubkey text,"
+            " puzzle_hash text PRIMARY_KEY,"
+            " wallet_type int,"
+            " wallet_id int,"
+            " used tinyint)"
         )
         await self.db_connection.execute(
             "CREATE INDEX IF NOT EXISTS derivation_index_index on derivation_paths(derivation_index)"

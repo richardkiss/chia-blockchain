@@ -30,7 +30,6 @@ if sys.version_info < (3, 8):
 
 
 else:
-
     from typing import get_args
 
 

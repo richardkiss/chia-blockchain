@@ -22,13 +22,13 @@ def api_request(f):
 
         return f(**inter)
 
-    setattr(f_substitute, "api_function", True)
+    f_substitute.api_function = True
     return f_substitute
 
 
 def peer_required(func):
     def inner():
-        setattr(func, "peer_required", True)
+        func.peer_required = True
         return func
 
     return inner()

@@ -1,16 +1,16 @@
 import time
 from secrets import token_bytes
 
-from blspy import PrivateKey, AugSchemeMPL
+from blspy import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
+from src.types.blockchain_format.program import Program
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.blockchain_format.program import Program
-from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
-from src.util.wallet_tools import WalletTool
 from src.util.ints import uint32
+from src.util.wallet_tools import WalletTool
 from src.wallet.derive_keys import master_sk_to_wallet_sk
+from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
 
 def float_to_str(f):
@@ -22,14 +22,13 @@ def float_to_str(f):
         zero_padding = "0" * (abs(int(exp)) - 1)  # minus 1 for decimal point in the sci notation
         sign = "-" if f < 0 else ""
         if exp > 0:
-            float_string = "{}{}{}.0".format(sign, digits, zero_padding)
+            float_string = f"{sign}{digits}{zero_padding}.0"
         else:
-            float_string = "{}0.{}{}".format(sign, zero_padding, digits)
+            float_string = f"{sign}0.{zero_padding}{digits}"
     return float_string
 
 
 def run_and_return_cost_time(chialisp):
-
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
     " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
@@ -157,4 +156,4 @@ if __name__ == "__main__":
     constant = clvm_should_cost / clvm_cost
     format = float_to_str(constant)
     print(f"Constant factor: {format}")
-    print(f"CLVM RATIO MULTIPLIER: {1/constant}")
+    print(f"CLVM RATIO MULTIPLIER: {1 / constant}")

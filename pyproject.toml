@@ -7,3 +7,27 @@ local_scheme = "no-local-version"
 
 [tool.black]
 line-length = 120
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+# Enable flake8-bugbear (`B`) rules, in addition to the defaults.
+select = ["E", "F", "B", "W", "I", "UP"]
+# Ignore the same rules as the current flake8 config
+ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore import sorting in __init__.py files
+"__init__.py" = ["F401"]
+
+[tool.ruff.format]
+# Use double quotes for strings.
+quote-style = "double"
+# Indent with spaces, rather than tabs.
+indent-style = "space"
+# Respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Automatically detect the appropriate line ending.
+line-ending = "auto"

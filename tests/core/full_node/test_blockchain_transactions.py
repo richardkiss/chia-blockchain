@@ -1,20 +1,20 @@
 import asyncio
+import logging
 
 import pytest
-import logging
 from clvm.casts import int_to_bytes
 
 from src.consensus.blockchain import ReceiveBlockResult
 from src.protocols import full_node_protocol
+from src.types.announcement import Announcement
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
-from src.util.errors import Err, ConsensusError
+from src.util.errors import ConsensusError, Err
 from src.util.ints import uint64
-from tests.core.full_node.test_full_node import connect_and_get_peer
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
-from src.types.announcement import Announcement
+from tests.core.full_node.test_full_node import connect_and_get_peer
+from tests.setup_nodes import bt, setup_two_nodes, test_constants
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -539,7 +539,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_announcement_consumed(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -759,7 +758,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_time_exceeds(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -820,7 +818,6 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
-
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]

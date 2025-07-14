@@ -332,13 +332,13 @@ def deserialize_proof(proof):
 
 
 def _deserialize(proof, pos, bits):
-    t = proof[pos : pos + 1]  # flake8: noqa
+    t = proof[pos : pos + 1]  # noqa: E203
     if t == EMPTY:
         return _empty, pos + 1
     if t == TERMINAL:
-        return TerminalNode(proof[pos + 1 : pos + 33], bits), pos + 33  # flake8: noqa
+        return TerminalNode(proof[pos + 1 : pos + 33], bits), pos + 33  # noqa: E203
     if t == TRUNCATED:
-        return TruncatedNode(proof[pos + 1 : pos + 33]), pos + 33  # flake8: noqa
+        return TruncatedNode(proof[pos + 1 : pos + 33]), pos + 33  # noqa: E203
     if t != MIDDLE:
         raise SetError()
     v0, pos = _deserialize(proof, pos + 1, bits + [0])

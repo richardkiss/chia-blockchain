@@ -1,21 +1,20 @@
-import click
-import traceback
-
-import aiohttp
 import asyncio
 import time
-from time import struct_time, localtime
-
+import traceback
+from time import localtime, struct_time
 from typing import List, Optional
 
+import aiohttp
+import click
+
 from src.consensus.block_record import BlockRecord
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.server.outbound_message import NodeType
 from src.types.full_block import FullBlock
-from src.rpc.full_node_rpc_client import FullNodeRpcClient
+from src.util.bech32m import encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint16
 
 
@@ -29,7 +28,6 @@ async def show_async(
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
-
     # TODO read configuration for rpc_port instead of assuming default
 
     try:
@@ -88,7 +86,7 @@ async def show_async(
                 )
 
                 print("Estimated network space: ", end="")
-                network_space_human_readable = blockchain_state["space"] / 1024 ** 4
+                network_space_human_readable = blockchain_state["space"] / 1024**4
                 if network_space_human_readable >= 1024:
                     network_space_human_readable = network_space_human_readable / 1024
                     print(f"{network_space_human_readable:.3f} PiB")
@@ -199,7 +197,7 @@ async def show_async(
         if block_header_hash_by_height != "":
             block_header = await client.get_block_record_by_height(block_header_hash_by_height)
             if block_header is not None:
-                print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
+                print(f"Header hash of block {block_header_hash_by_height}: {block_header.header_hash.hex()}")
             else:
                 print("Block height", block_header_hash_by_height, "not found.")
         if block_by_header_hash != "":

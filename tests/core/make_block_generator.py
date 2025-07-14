@@ -1,6 +1,6 @@
-import blspy
-
 from typing import Dict
+
+import blspy
 
 from src.full_node.bundle_tools import best_solution_program
 from src.types.blockchain_format.coin import Coin
