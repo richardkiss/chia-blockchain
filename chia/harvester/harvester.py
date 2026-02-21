@@ -28,13 +28,11 @@ from chia.plotting.util import (
     PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
-    add_plot_directory,
     get_harvester_config,
-    get_plot_directories,
     remove_plot,
-    remove_plot_directory,
     update_harvester_config,
 )
+from chia.util.harvester_config import add_plot_directory, get_plot_directories, remove_plot_directory
 from chia.protocols.outbound_message import NodeType
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.server import ChiaServer

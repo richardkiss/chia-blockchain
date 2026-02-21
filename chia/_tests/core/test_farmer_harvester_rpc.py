@@ -32,7 +32,7 @@ from chia.farmer.farmer_rpc_client import FarmerRpcClient
 from chia.farmer.farmer_service import FarmerService
 from chia.harvester.harvester_service import HarvesterService
 from chia.plot_sync.receiver import Receiver, get_list_or_len
-from chia.plotting.util import add_plot_directory
+from chia.util.harvester_config import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
 from chia.rpc.rpc_client import ResponseFailureError

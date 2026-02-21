@@ -78,9 +78,9 @@ from chia.plotting.util import (
     PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
-    add_plot_directory,
     parse_plot_info,
 )
+from chia.util.harvester_config import add_plot_directory
 from chia.server.server import ssl_context_for_client
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import (
