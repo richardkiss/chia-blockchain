@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+from chia_rs import get_spends_for_trusted_block, solution_generator_2026
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64, uint128
 
@@ -10,6 +12,7 @@ from chia._tests.util.run_block import run_json_block
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 
 AGG_SIG_DATA = bytes32.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2")
@@ -127,3 +130,55 @@ def test_generator_ref() -> None:
     cat_list = run_json_block(full_block, dirname, constants)
 
     assert cat_list == []
+
+
+@pytest.mark.parametrize("filename", ["1315630.json", "1315544.json", "1315537.json"])
+def test_hf2_generator(filename: str) -> None:
+    dirname = Path(__file__).parent
+    full_block = json.loads((dirname / filename).read_text())
+    expected = run_json_block(full_block, dirname, constants)
+    assert expected
+
+    block = full_block["block"]
+    spends = get_spends_for_trusted_block(
+        constants, bytes.fromhex(block["transactions_generator"].removeprefix("0x")), [], 0
+    )["block_spends"]
+    block["transactions_generator_buffer"] = (
+        "0x" + solution_generator_2026([(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spends]).hex()
+    )
+    block["transactions_generator"] = None
+    block["version"] = 1
+    block["transactions_info"]["cost"] = constants.MAX_BLOCK_COST_CLVM
+
+    assert run_json_block(full_block, dirname, constants) == expected
+
+
+def test_hf2_block_no_generator() -> None:
+    dirname = Path(__file__).parent
+    full_block = json.loads((dirname / "300000.json").read_text())
+    full_block["block"]["version"] = 1
+    full_block["block"]["transactions_generator_buffer"] = None
+    assert run_json_block(full_block, dirname, constants) == []
+
+
+@pytest.mark.parametrize("interned", [False, True])
+def test_generator_cost_limit(interned: bool) -> None:
+    dirname = Path(__file__).parent
+    full_block = json.loads((dirname / "1315630.json").read_text())
+    block = full_block["block"]
+    if interned:
+        spends = get_spends_for_trusted_block(
+            constants, bytes.fromhex(block["transactions_generator"].removeprefix("0x")), [], 0
+        )["block_spends"]
+        block["transactions_generator_buffer"] = solution_generator_2026(
+            [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spends]
+        ).hex()
+        block["transactions_generator"] = None
+        block["version"] = 1
+    block["transactions_info"]["cost"] = 1
+
+    with pytest.raises(ConsensusError) as error:
+        run_json_block(full_block, dirname, constants)
+    # HF2 bounds the encoded size against the cost budget before decoding.
+    expected_error = Err.GENERATOR_RUNTIME_ERROR if interned else Err.BLOCK_COST_EXCEEDS_MAX
+    assert error.value.code == expected_error
