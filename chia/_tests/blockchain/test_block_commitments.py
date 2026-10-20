@@ -7,7 +7,9 @@ import pytest
 from chia_rs import BlockRecord, ConsensusConstants, FullBlock
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
+from pytest_mock import MockerFixture
 
+import chia.simulator.block_tools as block_tools_module
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_exactly
@@ -24,6 +26,7 @@ from chia.consensus.challenge_tree import (
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.consensus.multiprocess_validation import _run_block
 from chia.full_node.full_node_store import FullNodeStore
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import Message, NodeType
@@ -751,3 +754,54 @@ def test_mmr_manager_deep_copy() -> None:
 
     # Verify they are truly independent objects
     assert mmr1._mmr is not mmr2._mmr
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("start_height", [10, 550])
+@pytest.mark.parametrize("force_overflow", [False, True])
+async def test_injected_transaction_at_nonzero_hf2(
+    fork_height2_500_block_tools: BlockTools,
+    fork_height2_500_1000_blocks: list[FullBlock],
+    start_height: int,
+    force_overflow: bool,
+    mocker: MockerFixture,
+) -> None:
+    bt = fork_height2_500_block_tools
+    blocks = fork_height2_500_1000_blocks[:start_height]
+    wallet = bt.get_farmer_wallet_tool()
+    coin = next(
+        coin for block in blocks for coin in block.get_included_reward_coins() if coin.puzzle_hash == bt.farmer_ph
+    )
+    bundle = wallet.generate_signed_transaction(uint64(coin.amount), wallet.get_new_puzzlehash(), coin)
+    cost_spy = mocker.spy(block_tools_module, "compute_block_cost")
+    generator_spy = mocker.spy(bt, "setup_new_gen")
+    result = bt.get_consecutive_blocks(
+        1,
+        blocks,
+        transaction_data=bundle,
+        guarantee_transaction_block=True,
+        force_overflow=force_overflow,
+    )
+    generators = [call.kwargs["block_generator"] for call in generator_spy.call_args_list]
+    assert generators
+    assert all(generator is generators[0] for generator in generators)
+    assert cost_spy.call_count == 1
+    block = result[-1]
+    _, _, records = load_block_list(result, bt.constants)
+    cache = BlockCache(records, BlockchainMMRManager(bt.constants.GENESIS_CHALLENGE))
+    prev_tx_height = pre_sp_tx_block_height(
+        bt.constants,
+        cache,
+        prev_b_hash=block.prev_header_hash,
+        sp_index=block.reward_chain_block.signage_point_index,
+        finished_sub_slots=len(block.finished_sub_slots),
+    )
+    assert (prev_tx_height >= bt.constants.HARD_FORK2_HEIGHT) == (start_height == 550)
+    assert block.version == (1 if start_height == 550 else 0)
+    assert block.transactions_info is not None
+    error, error_msg, conditions = _run_block(block, [], prev_tx_height, bt.constants)
+    assert error is None, error_msg
+    assert conditions is not None
+    assert conditions.validated_signature
+    assert conditions.cost == block.transactions_info.cost
+    assert [spend.coin_id for spend in conditions.spends] == [coin.name()]

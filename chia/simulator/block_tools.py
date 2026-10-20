@@ -466,8 +466,6 @@ class BlockTools:
             dummy_refs = []
 
         if block_generator is not None:
-            # this means the caller passed in block_generator
-            # to be included in the block.
             assert block_refs == [], "block references cannot be combined with block_generator"
             assert not dummy_block_references, "(dummy) block references cannot be combined with block_generator"
             return block_generator
@@ -1010,33 +1008,35 @@ class BlockTools:
         # this variable is true whenever there is a pending sub-epoch or epoch that needs to be added in the next block.
         pending_ses: bool = False
 
-        block_generator: NewBlockGenerator | None = None
-        if transaction_data is not None:
+        # Injected transactions may be tried in several non-transaction blocks.
+        # Reuse their generator while the candidate's execution rules stay the same.
+        cached_transaction_generator: tuple[tuple[int, bool], NewBlockGenerator] | None = None
+
+        def get_transaction_generator(prev_tx_height: uint32, height: uint32) -> NewBlockGenerator | None:
+            nonlocal cached_transaction_generator
+            if transaction_data is None:
+                return None
+            flags = get_flags_for_height_and_constants(prev_tx_height, constants)
+            post_hf1 = height >= constants.HARD_FORK_HEIGHT
+            key = (flags, post_hf1)
+            if cached_transaction_generator is not None and cached_transaction_generator[0] == key:
+                return cached_transaction_generator[1]
+
             additions = compute_additions_unchecked(transaction_data)
             removals = transaction_data.removals()
-            flags = get_flags_for_height_and_constants(prev_tx_height, self.constants)
-            interned = (flags & INTERNED_SPEND_LIST) != 0
-            if curr.height >= self.constants.HARD_FORK_HEIGHT and not interned:
+            interned = bool(flags & INTERNED_SPEND_LIST)
+            if post_hf1 and not interned:
                 program_bytes = simple_solution_generator_backrefs(transaction_data).program
             else:
                 program_bytes = simple_solution_generator(transaction_data).program
-            block_refs = []
-            cost = compute_block_cost(
-                SerializedProgram.from_bytes(program_bytes), self.constants, uint32(curr.height + 1), prev_tx_height
-            )
-            # once INTERNED_SPEND_LIST is active, the block holds the serde_2026
-            # serialized spend list instead
+            cost = compute_block_cost(SerializedProgram.from_bytes(program_bytes), constants, height, prev_tx_height)
             if interned:
                 program_bytes = simple_solution_generator(transaction_data, flags).program
-            block_generator = NewBlockGenerator(
-                program_bytes,
-                [],
-                block_refs,
-                transaction_data.aggregated_signature,
-                additions,
-                removals,
-                cost,
+            generator = NewBlockGenerator(
+                program_bytes, [], [], transaction_data.aggregated_signature, additions, removals, cost
             )
+            cached_transaction_generator = (key, generator)
+            return generator
 
         # Start at the last block in block list
         # Get the challenge for that slot
@@ -1150,7 +1150,7 @@ class BlockTools:
                             available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
-                            block_generator=block_generator,
+                            block_generator=get_transaction_generator(prev_tx_height, uint32(latest_block.height + 1)),
                             include_transactions=include_transactions,
                             block_refs=block_refs,
                         )
@@ -1190,7 +1190,7 @@ class BlockTools:
                             overflow_rc_challenge=None,
                         )
                         if block_record.is_transaction_block:
-                            block_generator = None
+                            transaction_data = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
@@ -1480,7 +1480,7 @@ class BlockTools:
                             available_coins,
                             prev_tx_height=prev_tx_height,
                             dummy_block_references=dummy_block_references,
-                            block_generator=block_generator,
+                            block_generator=get_transaction_generator(prev_tx_height, uint32(latest_block.height + 1)),
                             include_transactions=include_transactions,
                             block_refs=block_refs,
                         )
@@ -1520,7 +1520,7 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
                         if block_record.is_transaction_block:
-                            block_generator = None
+                            transaction_data = None
                             block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
