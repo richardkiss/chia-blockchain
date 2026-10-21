@@ -447,7 +447,7 @@ class BlockTools:
         block_refs: list[uint32],
     ) -> NewBlockGenerator | None:
         if prev_tx_height >= self.constants.SOFT_FORK9_HEIGHT:
-            assert block_refs == [], "block references are not allowed after hard fork 2"
+            block_refs = []
             dummy_block_references = False
 
         # we don't know if the new block will be a transaction
@@ -466,7 +466,6 @@ class BlockTools:
             dummy_refs = []
 
         if block_generator is not None:
-            assert block_refs == [], "block references cannot be combined with block_generator"
             assert not dummy_block_references, "(dummy) block references cannot be combined with block_generator"
             return block_generator
 

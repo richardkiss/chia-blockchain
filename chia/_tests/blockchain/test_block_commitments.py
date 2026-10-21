@@ -805,3 +805,35 @@ async def test_injected_transaction_at_nonzero_hf2(
     assert conditions.validated_signature
     assert conditions.cost == block.transactions_info.cost
     assert [spend.coin_id for spend in conditions.spends] == [coin.name()]
+
+
+@pytest.mark.anyio
+async def test_generator_refs_at_sf9(
+    fork_height2_500_block_tools: BlockTools,
+    fork_height2_500_1000_blocks: list[FullBlock],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bt = fork_height2_500_block_tools
+    monkeypatch.setattr(bt, "constants", bt.constants.replace(SOFT_FORK9_HEIGHT=uint32(500)))
+    _, _, records = load_block_list(fork_height2_500_1000_blocks[:10], bt.constants)
+    curr = records[fork_height2_500_1000_blocks[9].header_hash]
+    block_refs = [uint32(0)]
+    for prev_tx_height in (499, 500):
+        generator = bt.setup_new_gen(
+            [],
+            curr,
+            None,
+            None,
+            [],
+            prev_tx_height=uint32(prev_tx_height),
+            dummy_block_references=True,
+            include_transactions=False,
+            block_generator=None,
+            block_refs=block_refs,
+        )
+        if prev_tx_height < 500:
+            assert generator is not None
+            assert generator.block_refs == block_refs
+        else:
+            assert generator is None
+        assert block_refs == [uint32(0)]
