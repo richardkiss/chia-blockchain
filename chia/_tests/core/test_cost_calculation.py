@@ -9,7 +9,6 @@ from chia_rs import (
     G1Element,
     generator_interned_vbytes,
     get_flags_for_height_and_constants,
-    solution_generator,
     solution_generator_2026,
 )
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin
@@ -32,9 +31,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
-# a classic generator is (q . spend-list-wrapper): this prefix, and the cost of
-# running it
-QUOTE_PREFIX = bytes.fromhex("ff01")
+# Cost of running the quote in a classic generator.
 QUOTE_COST = 20
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
 
@@ -125,9 +122,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
         # a serde_2026 spend list isn't run (so there's no quote cost), and
         # its size is charged by interned vbytes of the spend list wrapper
         clvm_cost -= QUOTE_COST
-        spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in spend_bundle.coin_spends]
-        spend_list_wrapper = solution_generator(spends)[len(QUOTE_PREFIX) :]
-        byte_cost = generator_interned_vbytes(spend_list_wrapper) * bt.constants.COST_PER_BYTE
+        byte_cost = generator_interned_vbytes(program.program) * bt.constants.COST_PER_BYTE
     else:
         byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
     assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost

@@ -4,7 +4,7 @@ import logging
 from itertools import pairwise
 
 import pytest
-from chia_rs import BlockRecord, ConsensusConstants, FullBlock
+from chia_rs import INTERNED_SPEND_LIST, BlockRecord, ConsensusConstants, FullBlock, get_flags_for_height_and_constants
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from pytest_mock import MockerFixture
@@ -782,9 +782,8 @@ async def test_injected_transaction_at_nonzero_hf2(
         guarantee_transaction_block=True,
         force_overflow=force_overflow,
     )
-    generators = [call.kwargs["block_generator"] for call in generator_spy.call_args_list]
-    assert generators
-    assert all(generator is generators[0] for generator in generators)
+    assert generator_spy.call_count == 1
+    assert generator_spy.call_args.kwargs["transaction_data"] is bundle
     assert cost_spy.call_count == 1
     block = result[-1]
     _, _, records = load_block_list(result, bt.constants)
@@ -821,14 +820,14 @@ async def test_generator_refs_at_sf9(
     for prev_tx_height in (499, 500):
         generator = bt.setup_new_gen(
             [],
-            curr,
+            uint32(curr.height + 1),
             None,
             None,
             [],
             prev_tx_height=uint32(prev_tx_height),
             dummy_block_references=True,
             include_transactions=False,
-            block_generator=None,
+            transaction_data=None,
             block_refs=block_refs,
         )
         if prev_tx_height < 500:
@@ -837,3 +836,46 @@ async def test_generator_refs_at_sf9(
         else:
             assert generator is None
         assert block_refs == [uint32(0)]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("force_overflow", [False, True])
+async def test_generated_transactions_across_forks(
+    fork_height2_500_block_tools: BlockTools,
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+    force_overflow: bool,
+) -> None:
+    bt = fork_height2_500_block_tools
+    constants = bt.constants.replace(
+        HARD_FORK_HEIGHT=uint32(10), HARD_FORK2_HEIGHT=uint32(20), SOFT_FORK9_HEIGHT=uint32(40)
+    )
+    monkeypatch.setattr(bt, "constants", constants)
+    generator_spy = mocker.spy(bt, "setup_new_gen")
+    cost_spy = mocker.spy(block_tools_module, "compute_block_cost")
+    blocks = bt.get_consecutive_blocks(
+        80,
+        seed=b"cached-generators",
+        include_transactions=True,
+        dummy_block_references=True,
+        force_overflow=force_overflow,
+    )
+
+    # Non-transaction candidates reuse the pending generator instead of signing
+    # and executing another spend bundle. Inclusion must invalidate the cache.
+    transaction_blocks = [block for block in blocks[1:] if block.is_transaction_block()]
+    assert len(transaction_blocks) <= generator_spy.call_count < len(blocks) - 1
+    assert cost_spy.call_count == generator_spy.call_count
+    flags = {
+        get_flags_for_height_and_constants(call.kwargs["prev_tx_height"], constants)
+        for call in generator_spy.call_args_list
+    }
+    assert len(flags) == 3
+    assert any(flag & INTERNED_SPEND_LIST for flag in flags)
+    assert any(not flag & INTERNED_SPEND_LIST for flag in flags)
+
+    # Validate the whole chain, including costs, serialization, signatures and
+    # coin availability. Reusing a consumed generator would double-spend here.
+    async with create_blockchain(constants, 2) as (blockchain, _):
+        for block in blocks:
+            await _validate_and_add_block_no_error(blockchain, block)
