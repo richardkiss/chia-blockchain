@@ -28,6 +28,7 @@ from chia_rs import (
     SpendConditions,
     TransactionsInfo,
     UnfinishedBlock,
+    get_flags_for_height_and_constants,
     is_canonical_serialization,
 )
 from chia_rs.sized_bytes import bytes32
@@ -58,6 +59,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header
+from chia.consensus.generator_validation import compute_generator_root
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
@@ -4114,7 +4116,19 @@ class TestReorgs:
             # The interned tree has 8 virtual bytes, independent of varint size.
             block = recursive_replace(block, "transactions_info.cost", uint64(8 * bt.constants.COST_PER_BYTE))
         block = recursive_replace(block, "transactions_generator_buffer", generator_bytes)
-        block = recursive_replace(block, "transactions_info.generator_root", std_hash(generator_bytes))
+        pre_sp_tx_height = pre_sp_tx_block_height(
+            bt.constants,
+            empty_blockchain,
+            prev_b_hash=block.prev_header_hash,
+            sp_index=block.reward_chain_block.signage_point_index,
+            finished_sub_slots=len(block.finished_sub_slots),
+        )
+        flags = get_flags_for_height_and_constants(pre_sp_tx_height, bt.constants)
+        block = recursive_replace(
+            block,
+            "transactions_info.generator_root",
+            compute_generator_root(generator_bytes, flags),
+        )
         block = recursive_replace(
             block, "foliage_transaction_block.transactions_info_hash", std_hash(bytes(block.transactions_info))
         )

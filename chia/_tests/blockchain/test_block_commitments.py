@@ -4,7 +4,14 @@ import logging
 from itertools import pairwise
 
 import pytest
-from chia_rs import INTERNED_SPEND_LIST, BlockRecord, ConsensusConstants, FullBlock, get_flags_for_height_and_constants
+from chia_rs import (
+    INTERNED_SPEND_LIST,
+    BlockRecord,
+    ConsensusConstants,
+    FullBlock,
+    get_flags_for_height_and_constants,
+    tree_hash_2026,
+)
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
 from pytest_mock import MockerFixture
@@ -17,6 +24,7 @@ from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.setup_nodes import setup_two_nodes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_creation import unfinished_block_to_full_block_with_mmr
+from chia.consensus.block_generator_info import get_transactions_generator_bytes
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.challenge_tree import (
     compute_challenge_merkle_root,
@@ -24,10 +32,12 @@ from chia.consensus.challenge_tree import (
     get_challenge_start_height,
 )
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.generator_validation import compute_generator_root, validate_generator_root
 from chia.consensus.get_block_challenge import get_block_challenge, pre_sp_tx_block_height
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import _run_block
 from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.hard_fork_utils import get_flags
 from chia.protocols import full_node_protocol
 from chia.protocols.outbound_message import Message, NodeType
 from chia.protocols.timelord_protocol import NewInfusionPointVDF, NewUnfinishedBlockTimelord
@@ -36,6 +46,7 @@ from chia.simulator.block_tools import BlockTools, load_block_list, make_unfinis
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
+from chia.util.hash import std_hash
 
 log = logging.getLogger(__name__)
 
@@ -878,4 +889,78 @@ async def test_generated_transactions_across_forks(
     # coin availability. Reusing a consumed generator would double-spend here.
     async with create_blockchain(constants, 2) as (blockchain, _):
         for block in blocks:
+            generator = get_transactions_generator_bytes(block)
+            if generator is not None:
+                assert block.transactions_info is not None
+                interned = (await get_flags(constants, blockchain, block)) & INTERNED_SPEND_LIST
+                expected_root = tree_hash_2026(generator) if interned else std_hash(generator)
+                assert block.transactions_info.generator_root == expected_root
+                wrong_root = std_hash(generator) if interned else bytes32.zeros
+                assert wrong_root != expected_root
+                unfinished = make_unfinished_block(block, constants)
+                assert unfinished.transactions_info is not None
+                bad_block = unfinished.replace(
+                    transactions_info=unfinished.transactions_info.replace(generator_root=wrong_root)
+                )
+                _, error = await blockchain.validate_unfinished_block_header(bad_block)
+                assert error == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
             await _validate_and_add_block_no_error(blockchain, block)
+
+
+def test_generator_root_activation() -> None:
+    from chia_rs import solution_generator, solution_generator_2026
+
+    constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(10))
+    legacy = solution_generator([])
+    interned = solution_generator_2026([])
+    assert compute_generator_root(legacy, get_flags_for_height_and_constants(9, constants)) == std_hash(legacy)
+    root = tree_hash_2026(interned)
+    assert compute_generator_root(interned, get_flags_for_height_and_constants(10, constants)) == root
+    assert root != std_hash(interned)
+    assert validate_generator_root(interned, root, constants, uint32(10))
+    assert not validate_generator_root(interned, std_hash(interned), constants, uint32(10))
+    assert not validate_generator_root(b"malformed", root, constants, uint32(10))
+
+
+def test_generator_root_ignores_interned_encoding() -> None:
+    constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(0))
+    canonical = bytes.fromhex("fdff32303236 01 01 41 03 00 02 01")
+    overlong = bytes.fromhex("fdff32303236 01 8001 41 03 00 02 01")
+    assert std_hash(canonical) != std_hash(overlong)
+    root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants))
+    assert validate_generator_root(overlong, root, constants, uint32(0))
+
+
+@pytest.mark.parametrize("interned", [False, True])
+@pytest.mark.parametrize("has_generator", [False, True])
+def test_foliage_generator_root(interned: bool, has_generator: bool, mocker: MockerFixture) -> None:
+    from chia_rs import G1Element, G2Element, PoolTarget, solution_generator, solution_generator_2026
+    from chia_rs.sized_ints import uint128
+
+    from chia.consensus.block_creation import compute_block_fee, create_foliage
+    from chia.types.generator_types import NewBlockGenerator
+
+    constants = test_constants.replace(HARD_FORK2_HEIGHT=uint32(0 if interned else 1))
+    generator = solution_generator_2026([]) if interned else solution_generator([])
+    reward_block = mocker.Mock()
+    reward_block.get_hash.return_value = bytes32.zeros
+    reward_block.proof_of_space.pool_public_key = G1Element()
+    reward_block.proof_of_space.plot_public_key = G1Element()
+    _, _, info = create_foliage(
+        constants,
+        reward_block,
+        NewBlockGenerator(generator) if has_generator else None,
+        None,
+        mocker.Mock(),
+        uint128(0),
+        uint64(1),
+        bytes32.zeros,
+        PoolTarget(bytes32.zeros, uint32(0)),
+        lambda *_: G2Element(),
+        lambda *_: G2Element(),
+        b"generator-root",
+        compute_block_fee,
+    )
+    assert info is not None
+    expected = tree_hash_2026(generator) if interned else std_hash(generator)
+    assert info.generator_root == (expected if has_generator else bytes32.zeros)

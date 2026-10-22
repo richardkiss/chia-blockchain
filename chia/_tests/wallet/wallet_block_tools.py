@@ -31,6 +31,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_mmr import BlockchainMMRManager
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.generator_validation import compute_generator_root
 from chia.consensus.get_block_challenge import pre_sp_tx_block_height
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
@@ -302,7 +303,7 @@ def get_full_block_and_block_record(
 
     generator_hash = bytes32.zeros
     if block_generator is not None:
-        generator_hash = std_hash(block_generator.program)
+        generator_hash = compute_generator_root(block_generator.program, flags)
 
     foliage_data = FoliageBlockData(
         bytes32.zeros,

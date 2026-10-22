@@ -32,7 +32,7 @@ from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.generator_tools import get_block_header, tx_removals_and_additions
-from chia.consensus.generator_validation import validate_generator_ref_list
+from chia.consensus.generator_validation import validate_generator_ref_list, validate_generator_root
 from chia.consensus.get_block_challenge import (
     get_block_challenge,
     get_filter_challenge_from_chain,
@@ -47,7 +47,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.generator_types import BlockGenerator
 from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.priority_thread_pool_executor import Executor, _SupportsLessThan
 from chia.util.streamable import Streamable, streamable
 
@@ -157,7 +156,9 @@ def _pre_validate_block(
             # checks reject that before the expensive CLVM run.
             generator_bytes = get_transactions_generator_bytes(block)
             assert generator_bytes is not None
-            if std_hash(generator_bytes) != block.transactions_info.generator_root:
+            if not validate_generator_root(
+                generator_bytes, block.transactions_info.generator_root, constants, prev_tx_height
+            ):
                 return error_result(Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
             if block.foliage_transaction_block.transactions_info_hash != block.transactions_info.get_hash():
                 return error_result(Err.INVALID_TRANSACTIONS_INFO_HASH)
