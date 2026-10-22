@@ -34,6 +34,8 @@ from chia_rs import (
     UnfinishedBlock,
     VDFInfo,
     additions_and_removals,
+    solution_generator_2026,
+    tree_hash_2026,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -2110,13 +2112,16 @@ async def test_unfinished_block_with_replaced_generator(
     block: FullBlock = blocks[0]
     overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
 
-    replaced_generator = SerializedProgram.from_bytes(b"\x80")
+    use_v1 = block.version == 1
+    # after hard fork 2 the root is a tree hash, so the replacement must be a
+    # decodable serde_2026 blob for its root to be self-consistent
+    replaced_generator_bytes = solution_generator_2026([]) if use_v1 else b"\x80"
 
     if committment > 0:
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
-            std_hash(bytes(replaced_generator)),
+            tree_hash_2026(replaced_generator_bytes) if use_v1 else std_hash(replaced_generator_bytes),
             tr.generator_refs_root,
             tr.aggregated_signature,
             tr.fees,
@@ -2226,7 +2231,6 @@ async def test_unfinished_block_with_replaced_generator(
     if committment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
-    use_v1 = block.version == 1
     unf = UnfinishedBlock(
         block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
         reward_chain_block,
@@ -2235,9 +2239,9 @@ async def test_unfinished_block_with_replaced_generator(
         foliage,
         transaction_block,
         transactions_info,
-        None if use_v1 else replaced_generator,
+        None if use_v1 else SerializedProgram.from_bytes(replaced_generator_bytes),
         generator_refs,
-        bytes(replaced_generator) if use_v1 else None,
+        replaced_generator_bytes if use_v1 else None,
         block.version,
     )
 
