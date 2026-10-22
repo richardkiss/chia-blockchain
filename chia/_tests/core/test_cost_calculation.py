@@ -7,7 +7,7 @@ import pytest
 from chia_rs import (
     INTERNED_SPEND_LIST,
     G1Element,
-    generator_interned_vbytes,
+    generator_interned_vbytes_trusted,
     get_flags_for_height_and_constants,
     solution_generator_2026,
 )
@@ -122,7 +122,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
         # a serde_2026 spend list isn't run (so there's no quote cost), and
         # its size is charged by interned vbytes of the spend list wrapper
         clvm_cost -= QUOTE_COST
-        byte_cost = generator_interned_vbytes(program.program) * bt.constants.COST_PER_BYTE
+        byte_cost = generator_interned_vbytes_trusted(program.program) * bt.constants.COST_PER_BYTE
     else:
         byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
     assert npc_result.conds.cost == condition_cost + clvm_cost + byte_cost
