@@ -2256,6 +2256,50 @@ async def test_unfinished_block_with_replaced_generator(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
+    reason="generator_root is the tree hash only after hard fork 2",
+)
+async def test_finished_block_with_reencoded_generator(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+) -> None:
+    # The unfinished block is cached with one encoding of the generator, and the
+    # finished block arrives with a different encoding of the same tree. The root
+    # commits to the tree, so the node accepts it and keeps the cached copy.
+    full_node_1, _, _, _, _, _, bt = wallet_nodes
+    blocks = bt.get_consecutive_blocks(
+        3,
+        block_list_input=await full_node_1.get_all_full_blocks(),
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+    )
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+    wt: WalletTool = bt.get_pool_wallet_tool()
+    coin = find_reward_coin(blocks[-1], bt.pool_ph)
+    tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    block = blocks[-1]
+    generator = block.transactions_generator_buffer
+    assert generator is not None
+
+    await full_node_1.full_node.add_unfinished_block(unfinished_from_full_block(block), None)
+
+    # the decoder ignores trailing bytes: same tree, different bytes
+    reencoded = block.replace(transactions_generator_buffer=generator + bytes(8))
+    assert reencoded.header_hash == block.header_hash
+    await full_node_1.full_node.add_block(reencoded)
+    assert full_node_1.full_node.blockchain.get_peak_height() == block.height
+    stored = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+    assert stored is not None
+    assert stored.transactions_generator_buffer == generator
+
+
+@pytest.mark.anyio
 async def test_double_blocks_same_pospace(
     wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
