@@ -40,7 +40,7 @@ from chia_rs import (
     SubEpochSummary,
     SubSlotProofs,
     UnfinishedBlock,
-    generator_interned_vbytes,
+    generator_interned_vbytes_trusted,
     get_flags_for_height_and_constants,
     get_spends_for_trusted_block,
     solution_generator,
@@ -221,7 +221,7 @@ def compute_block_cost(
             clvm_cost += cost
             condition_cost += conditions_cost(result, charge_for_conditions=True)
 
-        size_cost = generator_interned_vbytes(generator) * constants.COST_PER_BYTE
+        size_cost = generator_interned_vbytes_trusted(generator) * constants.COST_PER_BYTE
         return uint64(clvm_cost + condition_cost + size_cost)
 
     if height >= constants.HARD_FORK_HEIGHT:
