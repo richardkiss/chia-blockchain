@@ -929,6 +929,8 @@ def test_generator_root_ignores_interned_encoding() -> None:
     assert std_hash(canonical) != std_hash(overlong)
     root = compute_generator_root(canonical, get_flags_for_height_and_constants(0, constants))
     assert validate_generator_root(overlong, root, constants, uint32(0))
+    # the decoder also ignores trailing bytes
+    assert validate_generator_root(canonical + b"\x00\x01\x02", root, constants, uint32(0))
 
 
 @pytest.mark.parametrize("interned", [False, True])

@@ -34,6 +34,8 @@ from chia_rs import (
     UnfinishedBlock,
     VDFInfo,
     additions_and_removals,
+    solution_generator_2026,
+    tree_hash_2026,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint16, uint32, uint64, uint128
@@ -2110,13 +2112,16 @@ async def test_unfinished_block_with_replaced_generator(
     block: FullBlock = blocks[0]
     overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
 
-    replaced_generator = SerializedProgram.from_bytes(b"\x80")
+    use_v1 = block.version == 1
+    # after hard fork 2 the root is a tree hash, so the replacement must be a
+    # decodable serde_2026 blob for its root to be self-consistent
+    replaced_generator_bytes = solution_generator_2026([]) if use_v1 else b"\x80"
 
     if committment > 0:
         tr = block.transactions_info
         assert tr is not None
         transactions_info = TransactionsInfo(
-            std_hash(bytes(replaced_generator)),
+            tree_hash_2026(replaced_generator_bytes) if use_v1 else std_hash(replaced_generator_bytes),
             tr.generator_refs_root,
             tr.aggregated_signature,
             tr.fees,
@@ -2226,7 +2231,6 @@ async def test_unfinished_block_with_replaced_generator(
     if committment > 6:
         generator_refs = [uint32(n) for n in range(600)]
 
-    use_v1 = block.version == 1
     unf = UnfinishedBlock(
         block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
         reward_chain_block,
@@ -2235,9 +2239,9 @@ async def test_unfinished_block_with_replaced_generator(
         foliage,
         transaction_block,
         transactions_info,
-        None if use_v1 else replaced_generator,
+        None if use_v1 else SerializedProgram.from_bytes(replaced_generator_bytes),
         generator_refs,
-        bytes(replaced_generator) if use_v1 else None,
+        replaced_generator_bytes if use_v1 else None,
         block.version,
     )
 
@@ -2249,6 +2253,50 @@ async def test_unfinished_block_with_replaced_generator(
     assert res is not None
     with pytest.raises(ConsensusError, match=f"{str(expected).split('.')[1]}"):
         await full_node_1.full_node.add_unfinished_block(unf, peer)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(
+    allowed=[ConsensusMode.HARD_FORK_3_0, ConsensusMode.HARD_FORK_3_0_AFTER_PHASE_OUT],
+    reason="generator_root is the tree hash only after hard fork 2",
+)
+async def test_finished_block_with_reencoded_generator(
+    wallet_nodes: tuple[
+        FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+    ],
+) -> None:
+    # The unfinished block is cached with one encoding of the generator, and the
+    # finished block arrives with a different encoding of the same tree. The root
+    # commits to the tree, so the node accepts it and keeps the cached copy.
+    full_node_1, _, _, _, _, _, bt = wallet_nodes
+    blocks = bt.get_consecutive_blocks(
+        3,
+        block_list_input=await full_node_1.get_all_full_blocks(),
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+    )
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+    wt: WalletTool = bt.get_pool_wallet_tool()
+    coin = find_reward_coin(blocks[-1], bt.pool_ph)
+    tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    block = blocks[-1]
+    generator = block.transactions_generator_buffer
+    assert generator is not None
+
+    await full_node_1.full_node.add_unfinished_block(unfinished_from_full_block(block), None)
+
+    # the decoder ignores trailing bytes: same tree, different bytes
+    reencoded = block.replace(transactions_generator_buffer=generator + bytes(8))
+    assert reencoded.header_hash == block.header_hash
+    await full_node_1.full_node.add_block(reencoded)
+    assert full_node_1.full_node.blockchain.get_peak_height() == block.height
+    stored = await full_node_1.full_node.block_store.get_full_block(block.header_hash)
+    assert stored is not None
+    assert stored.transactions_generator_buffer == generator
 
 
 @pytest.mark.anyio

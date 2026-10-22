@@ -30,6 +30,7 @@ from chia_rs import (
     UnfinishedBlock,
     get_flags_for_height_and_constants,
     is_canonical_serialization,
+    tree_hash_2026,
 )
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint8, uint32, uint64
@@ -4104,6 +4105,7 @@ class TestReorgs:
         if interned:
             # serde_2026 encoding of (() . A): one atom group, atom length 1
             # encoded overlong as 80 01, payload A, then nil/atom/cons.
+            canonical_bytes = bytes.fromhex("fdff32303236 01 01 41 03 00 02 01")
             generator_bytes = bytes.fromhex("fdff32303236 01 8001 41 03 00 02 01")
         else:
             # Program/SerializedProgram cannot load non-canonical CLVM, so
@@ -4140,6 +4142,9 @@ class TestReorgs:
         # Exercise decoding as well as body validation in this case.
         skip_prevalidation = not interned
         if interned:
+            # the root commits to the tree, so it's the same as the canonical encoding's
+            assert block.transactions_info is not None
+            assert block.transactions_info.generator_root == tree_hash_2026(canonical_bytes)
             assert block.foliage.foliage_transaction_block_hash is not None
             block = recursive_replace(
                 block,
@@ -4149,7 +4154,6 @@ class TestReorgs:
                     block.reward_chain_block.proof_of_space.plot_public_key,
                 ),
             )
-            # TODO: Make overlong serde_2026 atom encodings an error.
             expected_error = None
         elif consensus_mode >= ConsensusMode.SOFT_FORK_2_7:
             expected_error = Err.INVALID_TRANSACTIONS_GENERATOR_ENCODING
@@ -4159,6 +4163,46 @@ class TestReorgs:
         await _validate_and_add_block(
             empty_blockchain, block, expected_error=expected_error, skip_prevalidation=skip_prevalidation
         )
+
+    @pytest.mark.anyio
+    async def test_generator_root_reencoded(self, bt: BlockTools, consensus_mode: ConsensusMode) -> None:
+        # Before HF2, generator_root is the hash of the generator bytes. After,
+        # it's the tree hash, so a different serde_2026 encoding of the same
+        # tree leaves the root, and with it the header hash, unchanged, and the
+        # block validates with either encoding.
+        blocks = bt.get_consecutive_blocks(3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph)
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        coin = find_reward_coin(blocks[-1], bt.pool_ph)
+        tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin)
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+        block = blocks[-1]
+        generator_bytes = get_transactions_generator_bytes(block)
+        assert generator_bytes is not None
+        assert block.transactions_info is not None
+        if consensus_mode < ConsensusMode.HARD_FORK_3_0:
+            assert block.transactions_info.generator_root == std_hash(generator_bytes)
+            return
+
+        assert block.transactions_info.generator_root == tree_hash_2026(generator_bytes)
+        assert block.transactions_info.generator_root != std_hash(generator_bytes)
+
+        # the decoder ignores trailing bytes: same tree, different bytes
+        reencoded = generator_bytes + bytes(8)
+        assert tree_hash_2026(reencoded) == block.transactions_info.generator_root
+        reencoded_block = recursive_replace(block, "transactions_generator_buffer", reencoded)
+        assert reencoded_block.header_hash == block.header_hash
+
+        for candidate in (block, reencoded_block):
+            async with create_blockchain(bt.constants, 2) as (b, _):
+                for prev in blocks[:-1]:
+                    await _validate_and_add_block(b, prev)
+                _, header_error = await b.validate_unfinished_block_header(
+                    make_unfinished_block(candidate, bt.constants)
+                )
+                assert header_error is None
+                await _validate_and_add_block(b, candidate)
 
 
 @pytest.mark.anyio
