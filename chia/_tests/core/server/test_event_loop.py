@@ -81,8 +81,13 @@ def test_base_event_loop_has_methods() -> None:
             asyncio.run(main())
 
         thread = threading.Thread(target=in_thread)
-        thread.start()
-        thread.join()
+        try:
+            thread.start()
+            thread.join()
+        finally:
+            # `set_chia_policy()` installs a process-wide policy; restore the default
+            # so later tests in this worker get a stock event loop
+            asyncio.set_event_loop_policy(None)
 
         base_server = super(PausableServer, pausable_server)
 
